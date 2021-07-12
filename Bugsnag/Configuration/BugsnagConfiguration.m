@@ -101,6 +101,8 @@ static NSUserDefaults *userDefaults;
     [copy setEndpoints:self.endpoints];
     [copy setOnCrashHandler:self.onCrashHandler];
     [copy setPersistUser:self.persistUser];
+    [copy setAtomicSubdirectory:[self.atomicSubdirectory copy]];
+    [copy setSuppressNetworkOperations:self.suppressNetworkOperations];
     [copy setPlugins:[self.plugins copy]];
     [copy setReleaseStage:self.releaseStage];
     copy.session = self.session; // NSURLSession does not declare conformance to NSCopying

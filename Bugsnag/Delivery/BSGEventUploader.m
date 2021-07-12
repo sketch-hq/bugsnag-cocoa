@@ -16,7 +16,7 @@
 #import "BugsnagConfiguration.h"
 #import "BugsnagEvent+Private.h"
 #import "BugsnagLogger.h"
-
+#import "BugsnagNotifier.h"
 
 @interface BSGEventUploader () <BSGEventUploadOperationDelegate>
 
@@ -40,11 +40,16 @@
 @synthesize notifier = _notifier;
 
 - (instancetype)initWithConfiguration:(BugsnagConfiguration *)configuration notifier:(BugsnagNotifier *)notifier {
-    if ((self = [super init])) {
+    return [self initWithConfiguration:configuration eventsDirectory:[BSGFileLocations current].events crashReportsDirectory: [BSGFileLocations current].kscrashReports notifier:notifier];
+}
+
+- (instancetype)initWithConfiguration:(BugsnagConfiguration *)configuration eventsDirectory:(NSString *)eventsDirectory crashReportsDirectory:(NSString *)crashReportsDirectory notifier:(BugsnagNotifier *)notifier {
+    self = [super init];
+    if (self) {
         _apiClient = [[BugsnagApiClient alloc] initWithSession:configuration.session queueName:@""];
         _configuration = configuration;
-        _eventsDirectory = [BSGFileLocations current].events;
-        _kscrashReportsDirectory = [BSGFileLocations current].kscrashReports;
+        _eventsDirectory = eventsDirectory;
+        _kscrashReportsDirectory = crashReportsDirectory;
         _notifier = notifier;
         _scanQueue = [[NSOperationQueue alloc] init];
         _scanQueue.maxConcurrentOperationCount = 1;
@@ -55,6 +60,7 @@
     }
     return self;
 }
+
 
 - (void)dealloc {
     [_scanQueue cancelAllOperations];
@@ -69,6 +75,10 @@
 }
 
 - (void)uploadEvent:(BugsnagEvent *)event completionHandler:(nullable void (^)(void))completionHandler {
+    if (self.configuration.suppressNetworkOperations) {
+        bsg_log_warn(@"asked to upload event even though suppressNetworkOperations == YES.");
+    }
+
     NSUInteger operationCount = self.uploadQueue.operationCount;
     if (operationCount >= self.configuration.maxPersistedEvents) {
         bsg_log_warn(@"Dropping notification, %lu outstanding requests", (unsigned long)operationCount);
@@ -82,7 +92,68 @@
     [self.uploadQueue addOperation:operation];
 }
 
++ (void)synchronouslyUploadAtomicReportsWithConfiguration:(BugsnagConfiguration *)configuration {
+
+    BugsnagNotifier *notifier = [BugsnagNotifier new];
+    NSFileManager *fm = NSFileManager.defaultManager;
+    NSError *error = nil;
+
+    NSString *container = [BSGFileLocations atomicDirectoryContainer];
+
+    // If the parent directory does not exist, there is nothing to do.
+    if (![fm fileExistsAtPath:container]) {
+        return;
+    }
+
+    NSArray<NSString *> * contents = [fm contentsOfDirectoryAtPath:container error:&error];
+    if (!contents) {
+        bsg_log_err(@"failed to get contents of atomic container: %@", error);
+        return;
+    }
+
+    // Enumerate subdirectories.
+    for (NSString *item in contents) {
+        NSString *fullItemPath = [container stringByAppendingPathComponent:item];
+        BOOL isDirectory;
+        if (![fm fileExistsAtPath:fullItemPath isDirectory:&isDirectory] || !isDirectory) {
+            continue;
+        }
+
+        // Instantiate locations for this subdirectory.
+        BSGFileLocations *locations = [[BSGFileLocations alloc] initWithSubdirectory:item];
+
+        // Lock the directory. If locking fails, it might indicate that the writer is still writing to it.
+        // In that case, we simply ignore it.
+        if (![locations tryLockForProcessing]) {
+            continue;
+        }
+
+        bsg_log_info(@"processing events in atomic subdirectory %@", item);
+
+        // We make a copy of the configuration which has the atomic directory set to our value.
+        // At the time of writing, this is not strictly necessary, but seems cleaner.
+        BugsnagConfiguration *subConfiguration = [configuration copy];
+        subConfiguration.atomicSubdirectory = item;
+
+        // Init an uploader for our subdirectory.
+        BSGEventUploader *uploader = [[self alloc] initWithConfiguration:subConfiguration eventsDirectory:locations.events crashReportsDirectory:locations.kscrashReports notifier:notifier];
+
+        // Upload any events.
+        [uploader synchronouslyUploadEvents];
+
+        // If we managed to upload all events successfully, we delete this subdirectory.
+        if ([uploader sortedEventFiles].count == 0) {
+            if (![fm removeItemAtPath:fullItemPath error:&error]) {
+                bsg_log_err(@"failed to delete atomic event directory after upload: %@", error);
+            }
+        }
+    }
+}
+
 - (void)uploadStoredEvents {
+    if (self.configuration.suppressNetworkOperations) {
+        bsg_log_warn(@"asked to upload stored events even though suppressNetworkOperations == YES.");
+    }
     if (self.scanQueue.operationCount > 1) {
         // Prevent too many scan operations being scheduled
         return;
@@ -105,6 +176,10 @@
 }
 
 - (void)uploadLatestStoredEvent:(void (^)(void))completionHandler {
+    if (self.configuration.suppressNetworkOperations) {
+        bsg_log_warn(@"asked to upload latest stored event even though suppressNetworkOperations == YES.");
+    }
+
     NSString *latestFile = [self sortedEventFiles].lastObject;
     BSGEventUploadFileOperation *operation = latestFile ? [self uploadOperationsWithFiles:@[latestFile]].lastObject : nil;
     if (!operation) {
@@ -114,6 +189,14 @@
     }
     operation.completionBlock = completionHandler;
     [self.uploadQueue addOperation:operation];
+}
+
+- (void)synchronouslyUploadEvents {
+    if (self.configuration.suppressNetworkOperations) {
+        bsg_log_warn(@"asked to upload latest stored event even though suppressNetworkOperations == YES.");
+    }
+    NSArray<BSGEventUploadFileOperation *> *operations = [self uploadOperationsWithFiles:[self sortedEventFiles]];
+    [self.uploadQueue addOperations:operations waitUntilFinished:YES];
 }
 
 // MARK: - Implementation

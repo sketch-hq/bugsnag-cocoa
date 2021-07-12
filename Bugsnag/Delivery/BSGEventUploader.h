@@ -29,6 +29,9 @@ NS_ASSUME_NONNULL_BEGIN
 
 - (void)uploadLatestStoredEvent:(void (^)(void))completionHandler;
 
+/// Process all events found in any of the "atomic" subdirectories. The directories are deleted after successful upload.
+/// This method ignores directories that are currently locked by the writer.
++ (void)synchronouslyUploadAtomicReportsWithConfiguration:(BugsnagConfiguration *)configuration;
 @end
 
 NS_ASSUME_NONNULL_END

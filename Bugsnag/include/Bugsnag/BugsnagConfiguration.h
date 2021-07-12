@@ -292,6 +292,20 @@ typedef BOOL (^BugsnagOnSessionBlock)(BugsnagSession *_Nonnull session);
  */
 @property (nonatomic) BOOL persistUser;
 
+/**
+ If this string is non-nil, BugSnug will write its file into an exclusively owned subdirectory with the given name.
+ Exclusive write access is ensured by taking a `flock` of a known file in this subdirectory.
+ The typical use case is to generate a fresh UUID when starting BugSnug. This is useful when multiple instances
+ of the same binary might be running simultaneously, such as a command line tool.
+ */
+@property (nonatomic, nullable, copy) NSString *atomicSubdirectory;
+
+/**
+ If `YES`, no network calls will be made. Use this if you want to suppress automatic upload of events.
+ Presumably, events will then be uploaded in a later invocation of the process.
+ */
+@property (nonatomic) BOOL suppressNetworkOperations;
+
 // -----------------------------------------------------------------------------
 // MARK: - Methods
 // -----------------------------------------------------------------------------

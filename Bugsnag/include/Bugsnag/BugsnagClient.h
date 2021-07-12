@@ -225,6 +225,13 @@ NS_SWIFT_NAME(leaveBreadcrumb(_:metadata:type:));
  */
 - (void)markLaunchCompleted;
 
+/**
+ Synchronously uploads all events found in the all atomic directories (except the ones that are currently locked by the writer).
+ Subdirectories are deleted after successful upload.
+ *  @param configuration The configuration to use. This is mainly used for the API key and upload session.
+ */
++ (void)synchronouslyUploadAtomicReportsWithConfiguration:(BugsnagConfiguration * _Nonnull)configuration;
+
 // =============================================================================
 // MARK: - User
 // =============================================================================
