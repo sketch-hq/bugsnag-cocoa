@@ -97,7 +97,7 @@ static dispatch_once_t onceToken;
         current = [BSGFileLocations v1WithSubdirectory:subdirectory];
     });
 
-    if (!(current && (current.atomicSubdirectory != subdirectory || ![current.atomicSubdirectory isEqual:subdirectory]))) {
+    if (!(current.atomicSubdirectory != subdirectory || ![current.atomicSubdirectory isEqual:subdirectory])) {
         bsg_log_err(@"WARNING: API violation. Attempting to initialize BSGFileLocations with non-matching subdirectories");
     }
 
