@@ -17,6 +17,9 @@ NS_ASSUME_NONNULL_BEGIN
 @property (readonly, nonatomic) NSString *events;
 @property (readonly, nonatomic) NSString *kscrashReports;
 @property (readonly, nonatomic) NSString *sessions;
+/**
+ Absolute path to lock file.
+ */
 @property (readonly, nonatomic) NSString *lockFile;
 
 /**

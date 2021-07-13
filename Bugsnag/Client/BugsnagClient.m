@@ -268,7 +268,6 @@ __attribute__((annotate("oclint:suppress[too many methods]")))
         self.extraRuntimeInfo = [NSMutableDictionary new];
         self.crashSentry = [BugsnagCrashSentry new];
         _eventUploader = [[BSGEventUploader alloc] initWithConfiguration:_configuration notifier:_notifier];
-
         bsg_g_bugsnag_data.onCrash = (void (*)(const BSG_KSCrashReportWriter *))self.configuration.onCrashHandler;
 
         _notificationBreadcrumbs = [[BSGNotificationBreadcrumbs alloc] initWithConfiguration:configuration breadcrumbSink:self];
