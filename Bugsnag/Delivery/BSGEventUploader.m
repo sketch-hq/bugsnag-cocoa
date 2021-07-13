@@ -100,14 +100,12 @@
 
     NSString *container = [BSGFileLocations atomicDirectoryContainer];
 
-    // If the parent directory does not exist, there is nothing to do.
-    if (![fm fileExistsAtPath:container]) {
-        return;
-    }
-
     NSArray<NSString *> * contents = [fm contentsOfDirectoryAtPath:container error:&error];
     if (!contents) {
-        bsg_log_err(@"failed to get contents of atomic container: %@", error);
+        // Log the error, except if it indicates that the directory is simply missing, since this can legitimately happen.
+        if ( !([error.domain isEqual:NSCocoaErrorDomain] && error.code == NSFileReadNoSuchFileError) ) {
+            bsg_log_err(@"failed to get contents of atomic container: %@", error);
+        }
         return;
     }
 
