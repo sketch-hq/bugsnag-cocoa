@@ -73,6 +73,7 @@ static NSString *getAndCreateSubdir(NSString *rootPath, NSString *relativePath) 
 }
 
 @interface BSGFileLocations()
+/// Name of the atomic subdirectory used. Nil if the shared shared directory is used.
 @property (nonatomic, copy, nullable) NSString *atomicSubdirectory;
 @end
 
@@ -132,6 +133,7 @@ static dispatch_once_t onceToken;
         _state = [root stringByAppendingPathComponent:@"state.json"];
         _systemState = [root stringByAppendingPathComponent:@"system_state.json"];
         _lockFile = [root stringByAppendingPathComponent:BSGLockFileName];
+        _atomicSubdirectory = [subdirectory copy];
     }
     return self;
 }
@@ -171,4 +173,9 @@ static dispatch_once_t onceToken;
     // until we quit.
     return YES;
 }
+
+- (BOOL)usesAtomicSubdirectory {
+    return self.atomicSubdirectory != nil;
+}
+
 @end

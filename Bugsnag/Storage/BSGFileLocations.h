@@ -54,6 +54,10 @@ NS_ASSUME_NONNULL_BEGIN
 @property (readonly, nonatomic) NSString *systemState;
 
 /**
+ * Returns `YES` if the receiver uses an atomic subdirectory, `NO` if it uses the shared default directory.
+ */
+@property (readonly, nonatomic) BOOL usesAtomicSubdirectory;
+/**
  Initialize the file locations.
  @param subdirectory If nil, use the regular shared directory. Else use the subdirectory with the given name, inside the `atomicDirectoryContainer`.
  */

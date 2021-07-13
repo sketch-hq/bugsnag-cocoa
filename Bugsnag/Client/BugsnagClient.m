@@ -216,8 +216,6 @@ void BSGWriteSessionCrashData(BugsnagSession *session) {
 
 @property (readwrite, nullable, nonatomic) BugsnagLastRunInfo *lastRunInfo;
 
-@property (nonatomic, nullable) NSString *atomicSubdirectory;
-
 @end
 
 
@@ -235,10 +233,8 @@ __attribute__((annotate("oclint:suppress[too many methods]")))
     if ((self = [super init])) {
         // Take a shallow copy of the configuration
         _configuration = [configuration copy];
-        _atomicSubdirectory = [configuration.atomicSubdirectory copy];
-
-        BSGFileLocations *fileLocations = [BSGFileLocations currentWithSubdirectory:_atomicSubdirectory];
-        if (_atomicSubdirectory) {
+        BSGFileLocations *fileLocations = [BSGFileLocations currentWithSubdirectory:[_configuration.atomicSubdirectory copy]];
+        if (fileLocations.usesAtomicSubdirectory) {
             if (![fileLocations lockForWritingBlocking]) {
                 bsg_log_err(@"Warning: Failed to lock directory.");
             }
