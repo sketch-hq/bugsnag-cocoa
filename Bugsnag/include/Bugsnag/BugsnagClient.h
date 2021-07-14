@@ -230,7 +230,7 @@ NS_SWIFT_NAME(leaveBreadcrumb(_:metadata:type:));
  Subdirectories are deleted after successful upload.
  *  @param configuration The configuration to use. This is mainly used for the API key and upload session.
  */
-+ (void)synchronouslyUploadAtomicReportsWithConfiguration:(BugsnagConfiguration * _Nonnull)configuration;
++ (void)synchronouslyUploadExclusiveReportsWithConfiguration:(BugsnagConfiguration * _Nonnull)configuration;
 
 // =============================================================================
 // MARK: - User

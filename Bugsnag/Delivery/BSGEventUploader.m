@@ -92,7 +92,7 @@
     [self.uploadQueue addOperation:operation];
 }
 
-+ (void)synchronouslyUploadAtomicReportsWithConfiguration:(BugsnagConfiguration *)configuration {
++ (void)synchronouslyUploadExclusiveReportsWithConfiguration:(BugsnagConfiguration *)configuration {
 
     BugsnagNotifier *notifier = [BugsnagNotifier new];
     NSFileManager *fm = NSFileManager.defaultManager;
