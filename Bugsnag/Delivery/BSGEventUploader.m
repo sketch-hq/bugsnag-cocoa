@@ -92,7 +92,7 @@
     [self.uploadQueue addOperation:operation];
 }
 
-+ (void)synchronouslyUploadExclusiveReportsWithConfiguration:(BugsnagConfiguration *)configuration {
++ (BOOL)synchronouslyUploadExclusiveReportsWithConfiguration:(BugsnagConfiguration *)configuration {
 
     BugsnagNotifier *notifier = [BugsnagNotifier new];
     NSFileManager *fm = NSFileManager.defaultManager;
@@ -103,11 +103,14 @@
     NSArray<NSString *> * contents = [fm contentsOfDirectoryAtPath:container error:&error];
     if (!contents) {
         // Log the error, except if it indicates that the directory is simply missing, since this can legitimately happen.
-        if ( !([error.domain isEqual:NSCocoaErrorDomain] && error.code == NSFileReadNoSuchFileError) ) {
-            bsg_log_err(@"failed to get contents of exclusive container: %@", error);
+        if ([error.domain isEqual:NSCocoaErrorDomain] && error.code == NSFileReadNoSuchFileError) {
+            return YES;
         }
-        return;
+        bsg_log_err(@"failed to get contents of exclusive container: %@", error);
+        return NO;
     }
+
+    BOOL success = YES;
 
     // Enumerate subdirectories.
     for (NSString *item in contents) {
@@ -143,9 +146,15 @@
         if ([uploader sortedEventFiles].count == 0) {
             if (![fm removeItemAtPath:fullItemPath error:&error]) {
                 bsg_log_err(@"failed to delete exclusive event directory after upload: %@", error);
+                success = NO;
             }
+        } else {
+            // Most likely cause is that we failed to upload because of a network error.
+            bsg_log_err(@"failed to process all events in subdirectory %@", item);
+            success = NO;
         }
     }
+    return success;
 }
 
 - (void)uploadStoredEvents {

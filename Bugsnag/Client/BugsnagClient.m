@@ -678,8 +678,8 @@ __attribute__((annotate("oclint:suppress[too many methods]")))
     }];
 }
 
-+ (void)synchronouslyUploadExclusiveReportsWithConfiguration:(BugsnagConfiguration *)configuration {
-    [BSGEventUploader synchronouslyUploadExclusiveReportsWithConfiguration:configuration];
++ (BOOL)synchronouslyUploadExclusiveReportsWithConfiguration:(BugsnagConfiguration *)configuration {
+    return [BSGEventUploader synchronouslyUploadExclusiveReportsWithConfiguration:configuration];
 }
 
 // =============================================================================
