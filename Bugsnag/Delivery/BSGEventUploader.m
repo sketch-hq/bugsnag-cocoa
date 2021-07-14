@@ -98,7 +98,7 @@
     NSFileManager *fm = NSFileManager.defaultManager;
     NSError *error = nil;
 
-    NSString *container = [BSGFileLocations atomicDirectoryContainer];
+    NSString *container = [BSGFileLocations exclusiveDirectoryContainer];
 
     NSArray<NSString *> * contents = [fm contentsOfDirectoryAtPath:container error:&error];
     if (!contents) {
@@ -126,12 +126,12 @@
             continue;
         }
 
-        bsg_log_info(@"processing events in atomic subdirectory %@", item);
+        bsg_log_info(@"processing events in exclusive subdirectory %@", item);
 
-        // We make a copy of the configuration which has the atomic directory set to our value.
+        // We make a copy of the configuration which has the exclusive subdirectory set to our value.
         // At the time of writing, this is not strictly necessary, but seems cleaner.
         BugsnagConfiguration *subConfiguration = [configuration copy];
-        subConfiguration.atomicSubdirectory = item;
+        subConfiguration.exclusiveSubdirectory = item;
 
         // Init an uploader for our subdirectory.
         BSGEventUploader *uploader = [[self alloc] initWithConfiguration:subConfiguration eventsDirectory:locations.events crashReportsDirectory:locations.kscrashReports notifier:notifier];

@@ -233,8 +233,8 @@ __attribute__((annotate("oclint:suppress[too many methods]")))
     if ((self = [super init])) {
         // Take a shallow copy of the configuration
         _configuration = [configuration copy];
-        BSGFileLocations *fileLocations = [BSGFileLocations currentWithSubdirectory:[_configuration.atomicSubdirectory copy]];
-        if (fileLocations.usesAtomicSubdirectory) {
+        BSGFileLocations *fileLocations = [BSGFileLocations currentWithSubdirectory:[_configuration.exclusiveSubdirectory copy]];
+        if (fileLocations.usesExclusiveSubdirectory) {
             if (![fileLocations lockForWritingBlocking]) {
                 bsg_log_err(@"Warning: Failed to lock directory.");
             }

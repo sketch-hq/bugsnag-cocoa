@@ -101,7 +101,7 @@ static NSUserDefaults *userDefaults;
     [copy setEndpoints:self.endpoints];
     [copy setOnCrashHandler:self.onCrashHandler];
     [copy setPersistUser:self.persistUser];
-    [copy setAtomicSubdirectory:[self.atomicSubdirectory copy]];
+    [copy setExclusiveSubdirectory:[self.exclusiveSubdirectory copy]];
     [copy setSuppressNetworkOperations:self.suppressNetworkOperations];
     [copy setPlugins:[self.plugins copy]];
     [copy setReleaseStage:self.releaseStage];

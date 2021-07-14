@@ -9,7 +9,7 @@
 #import "BSGFileLocations.h"
 #import "BugsnagLogger.h"
 
-static NSString * const BSGAtomicDirectoryContainerName = @"atomic";
+static NSString * const BSGExclusiveDirectoryContainerName = @"exclusiveDirectories";
 static NSString * const BSGLockFileName = @"lockFile";
 
 static BOOL ensureDirExists(NSString *path) {
@@ -46,7 +46,7 @@ static NSString *rootDirectory(NSString *fsVersion, NSString *subdirectory) {
                     url.path,
                     // Processes that don't have an Info.plist have no bundleIdentifier
                     NSBundle.mainBundle.bundleIdentifier ?: NSProcessInfo.processInfo.processName,
-                    fsVersion, BSGAtomicDirectoryContainerName, subdirectory];
+                    fsVersion, BSGExclusiveDirectoryContainerName, subdirectory];
     } else {
         rootPath = [NSString stringWithFormat:@"%@/com.bugsnag.Bugsnag/%@/%@",
                     url.path,
@@ -73,8 +73,8 @@ static NSString *getAndCreateSubdir(NSString *rootPath, NSString *relativePath) 
 }
 
 @interface BSGFileLocations()
-/// Name of the atomic subdirectory used. Nil if the shared shared directory is used.
-@property (nonatomic, copy, nullable) NSString *atomicSubdirectory;
+/// Name of the exclusive subdirectory used. Nil if the shared shared directory is used.
+@property (nonatomic, copy, nullable) NSString *exclusiveSubdirectory;
 @end
 
 @implementation BSGFileLocations
@@ -98,7 +98,7 @@ static dispatch_once_t onceToken;
         current = [BSGFileLocations v1WithSubdirectory:subdirectory];
     });
 
-    if (!(current.atomicSubdirectory != subdirectory || ![current.atomicSubdirectory isEqual:subdirectory])) {
+    if (!(current.exclusiveSubdirectory != subdirectory || ![current.exclusiveSubdirectory isEqual:subdirectory])) {
         bsg_log_err(@"WARNING: API violation. Attempting to initialize BSGFileLocations with non-matching subdirectories");
     }
 
@@ -133,18 +133,18 @@ static dispatch_once_t onceToken;
         _state = [root stringByAppendingPathComponent:@"state.json"];
         _systemState = [root stringByAppendingPathComponent:@"system_state.json"];
         _lockFile = [root stringByAppendingPathComponent:BSGLockFileName];
-        _atomicSubdirectory = [subdirectory copy];
+        _exclusiveSubdirectory = [subdirectory copy];
     }
     return self;
 }
 
-+ (NSString *)atomicDirectoryContainer {
-    return [self v1AtomicDirectoryContainer];
++ (NSString *)exclusiveDirectoryContainer {
+    return [self v1ExclusiveDirectoryContainer];
 }
 
-+ (NSString *)v1AtomicDirectoryContainer {
++ (NSString *)v1ExclusiveDirectoryContainer {
     NSString *root = rootDirectory(@"v1", nil);
-    return [root stringByAppendingPathComponent:BSGAtomicDirectoryContainerName];
+    return [root stringByAppendingPathComponent:BSGExclusiveDirectoryContainerName];
 }
 
 - (BOOL)lockForWritingBlocking {
@@ -174,8 +174,8 @@ static dispatch_once_t onceToken;
     return YES;
 }
 
-- (BOOL)usesAtomicSubdirectory {
-    return self.atomicSubdirectory != nil;
+- (BOOL)usesExclusiveSubdirectory {
+    return self.exclusiveSubdirectory != nil;
 }
 
 @end

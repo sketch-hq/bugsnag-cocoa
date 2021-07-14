@@ -298,7 +298,7 @@ typedef BOOL (^BugsnagOnSessionBlock)(BugsnagSession *_Nonnull session);
  The typical use case is to generate a fresh UUID when starting BugSnug. This is useful when multiple instances
  of the same binary might be running simultaneously, such as a command line tool.
  */
-@property (nonatomic, nullable, copy) NSString *atomicSubdirectory;
+@property (nonatomic, nullable, copy) NSString *exclusiveSubdirectory;
 
 /**
  If `YES`, no network calls will be made. Use this if you want to suppress automatic upload of events.

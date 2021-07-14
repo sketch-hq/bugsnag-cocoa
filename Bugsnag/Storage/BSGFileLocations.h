@@ -54,12 +54,12 @@ NS_ASSUME_NONNULL_BEGIN
 @property (readonly, nonatomic) NSString *systemState;
 
 /**
- * Returns `YES` if the receiver uses an atomic subdirectory, `NO` if it uses the shared default directory.
+ * Returns `YES` if the receiver uses an exclusive subdirectory, `NO` if it uses the shared default directory.
  */
-@property (readonly, nonatomic) BOOL usesAtomicSubdirectory;
+@property (readonly, nonatomic) BOOL usesExclusiveSubdirectory;
 /**
  Initialize the file locations.
- @param subdirectory If nil, use the regular shared directory. Else use the subdirectory with the given name, inside the `atomicDirectoryContainer`.
+ @param subdirectory If nil, use the regular shared directory. Else use the subdirectory with the given name, inside the `exclusiveDirectoryContainer`.
  */
 - (instancetype) initWithSubdirectory:(NSString * _Nullable)subdirectory;
 
@@ -75,9 +75,9 @@ NS_ASSUME_NONNULL_BEGIN
 + (instancetype) v1;
 
 /**
- Get the parent directory of the atomic subdirectories.
+ Get the parent directory of the exclusive subdirectories.
  */
-+ (NSString *)atomicDirectoryContainer;
++ (NSString *)exclusiveDirectoryContainer;
 
 /**
  Uses a `flock` to get exclusive ownership to write to this directory. This method blocks until it succeeds taking the lock.
