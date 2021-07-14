@@ -104,7 +104,7 @@
     if (!contents) {
         // Log the error, except if it indicates that the directory is simply missing, since this can legitimately happen.
         if ( !([error.domain isEqual:NSCocoaErrorDomain] && error.code == NSFileReadNoSuchFileError) ) {
-            bsg_log_err(@"failed to get contents of atomic container: %@", error);
+            bsg_log_err(@"failed to get contents of exclusive container: %@", error);
         }
         return;
     }
