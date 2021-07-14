@@ -124,7 +124,7 @@
         BSGFileLocations *locations = [[BSGFileLocations alloc] initWithSubdirectory:item];
 
         // Lock the directory. If locking fails, it might indicate that the writer is still writing to it.
-        // In that case, we simply ignore it.
+        // In that case, we simply ignore it. A future upload should deal with the directory once the lock is released.
         if (![locations tryLockForProcessing]) {
             continue;
         }
