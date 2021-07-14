@@ -142,7 +142,7 @@
         // If we managed to upload all events successfully, we delete this subdirectory.
         if ([uploader sortedEventFiles].count == 0) {
             if (![fm removeItemAtPath:fullItemPath error:&error]) {
-                bsg_log_err(@"failed to delete atomic event directory after upload: %@", error);
+                bsg_log_err(@"failed to delete exclusive event directory after upload: %@", error);
             }
         }
     }
