@@ -29,6 +29,13 @@ NS_ASSUME_NONNULL_BEGIN
 
 - (void)uploadLatestStoredEvent:(void (^)(void))completionHandler;
 
+/**
+ *  Process all events found in any of the exclusive subdirectories. The directories are deleted after successful upload.
+ *  This method ignores directories that are currently locked by the writer.
+ *  @param configuration The configuration to use. This is mainly used for the API key and upload session.
+ *  @returns YES if all crash reports were successfully processed, NO if there was any kind of problem.
+ */
++ (BOOL)synchronouslyUploadExclusiveReportsWithConfiguration:(BugsnagConfiguration *)configuration;
 @end
 
 NS_ASSUME_NONNULL_END

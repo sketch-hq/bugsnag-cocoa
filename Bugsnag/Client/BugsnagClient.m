@@ -233,6 +233,13 @@ __attribute__((annotate("oclint:suppress[too many methods]")))
     if ((self = [super init])) {
         // Take a shallow copy of the configuration
         _configuration = [configuration copy];
+        BSGFileLocations *fileLocations = [BSGFileLocations currentWithSubdirectory:[_configuration.exclusiveSubdirectory copy]];
+        if (fileLocations.usesExclusiveSubdirectory) {
+            if (![fileLocations lockForWritingBlocking]) {
+                bsg_log_err(@"Warning: Failed to lock directory.");
+            }
+        }
+
         _state = [[BugsnagMetadata alloc] initWithDictionary:@{
             BSGKeyApp: @{BSGKeyIsLaunching: @YES},
             BSGKeyClient: BSGDictionaryWithKeyAndObject(BSGKeyContext, _configuration.context)
@@ -240,8 +247,6 @@ __attribute__((annotate("oclint:suppress[too many methods]")))
         self.notifier = [BugsnagNotifier new];
         self.systemState = [[BugsnagSystemState alloc] initWithConfiguration:configuration];
 
-        BSGFileLocations *fileLocations = [BSGFileLocations current];
-        
         NSString *crashPath = fileLocations.flagHandledCrash;
         crashSentinelPath = strdup(crashPath.fileSystemRepresentation);
         
@@ -400,17 +405,19 @@ __attribute__((annotate("oclint:suppress[too many methods]")))
                                                                target:self selector:@selector(appLaunchTimerFired:)
                                                              userInfo:nil repeats:NO];
     }
-    
-    if (self.lastRunInfo.crashedDuringLaunch && self.configuration.sendLaunchCrashesSynchronously) {
-        [self sendLaunchCrashSynchronously];
+
+    if (!self.configuration.suppressNetworkOperations) {
+        if (self.lastRunInfo.crashedDuringLaunch && self.configuration.sendLaunchCrashesSynchronously) {
+            [self sendLaunchCrashSynchronously];
+        }
+        
+        if (self.eventFromLastLaunch) {
+            [self.eventUploader uploadEvent:(BugsnagEvent * _Nonnull)self.eventFromLastLaunch completionHandler:nil];
+            self.eventFromLastLaunch = nil;
+        }
+        
+        [self.eventUploader uploadStoredEvents];
     }
-    
-    if (self.eventFromLastLaunch) {
-        [self.eventUploader uploadEvent:(BugsnagEvent * _Nonnull)self.eventFromLastLaunch completionHandler:nil];
-        self.eventFromLastLaunch = nil;
-    }
-    
-    [self.eventUploader uploadStoredEvents];
     
     // App hang detector deliberately started after sendLaunchCrashSynchronously (which by design may itself trigger an app hang)
     if (self.configuration.enabledErrorTypes.appHangs) {
@@ -671,6 +678,10 @@ __attribute__((annotate("oclint:suppress[too many methods]")))
     }];
 }
 
++ (BOOL)synchronouslyUploadExclusiveReportsWithConfiguration:(BugsnagConfiguration *)configuration {
+    return [BSGEventUploader synchronouslyUploadExclusiveReportsWithConfiguration:configuration];
+}
+
 // =============================================================================
 // MARK: - Breadcrumbs
 // =============================================================================
@@ -926,9 +937,16 @@ __attribute__((annotate("oclint:suppress[too many methods]")))
         [self.eventUploader storeEvent:event];
         // Replicate previous delivery mechanism's behaviour of waiting 1 second before delivering the event.
         // This should prevent potential duplicate uploads of unhandled errors where the app subsequently terminates.
-        [self.eventUploader uploadStoredEventsAfterDelay:1];
+        if (self.configuration.suppressNetworkOperations) {
+            [self.eventUploader uploadStoredEventsAfterDelay:1];
+        }
     } else {
-        [self.eventUploader uploadEvent:event completionHandler:nil];
+        if (self.configuration.suppressNetworkOperations) {
+            // We can't upload it now, let's store it for later.
+            [self.eventUploader storeEvent:event];
+        } else {
+            [self.eventUploader uploadEvent:event completionHandler:nil];
+        }
     }
 
     [self addAutoBreadcrumbForEvent:event];
