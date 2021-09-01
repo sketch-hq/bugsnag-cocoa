@@ -120,7 +120,7 @@ steps:
       - cocoa_fixture
     # More time than other steps as the BrowserStack iOS 11 devices seem particularly unstable and
     # sessions need resetting frequently, taking a minute or more each time.
-    timeout_in_minutes: 50
+    timeout_in_minutes: 60
     agents:
       queue: opensource
     plugins:
@@ -148,7 +148,7 @@ steps:
       - cocoa_fixture
     # More time than other steps as the BrowserStack iOS 11 devices seem particularly unstable and
     # sessions need resetting frequently, taking a minute or more each time.
-    timeout_in_minutes: 50
+    timeout_in_minutes: 60
     agents:
       queue: opensource
     plugins:
@@ -188,7 +188,6 @@ steps:
         --os=macos
         --os-version=11.0
         --app=macOSTestApp
-        --tags='not @skip_macos'
         --fail-fast
         --order=random
 
@@ -212,7 +211,6 @@ steps:
         --os=macos
         --os-version=11
         --app=macOSTestApp
-        --tags='not @skip_macos'
         --fail-fast
         --order=random
 
@@ -233,7 +231,6 @@ steps:
         --os=macos
         --os-version=10.13
         --app=macOSTestApp
-        --tags='not @skip_macos'
         --fail-fast
         --order=random
 
@@ -254,7 +251,6 @@ steps:
         --os=macos
         --os-version=10.14
         --app=macOSTestApp
-        --tags='not @skip_macos'
         --fail-fast
         --order=random
 
@@ -271,9 +267,9 @@ steps:
       - echo "--- Pod install"
       - pod install
       - echo "+++ Build Release iOS"
-      - xcodebuild -workspace Bugsnag\ Test\ App.xcworkspace -scheme Bugsnag\ Test\ App -configuration Release -destination generic/platform=iOS -derivedDataPath DerivedData -quiet build GCC_TREAT_WARNINGS_AS_ERRORS=YES
+      - xcodebuild -workspace objective-c-ios.xcworkspace -scheme objective-c-ios -configuration Release -destination generic/platform=iOS -derivedDataPath DerivedData -quiet build GCC_TREAT_WARNINGS_AS_ERRORS=YES
       - echo "+++ Build Debug iOS Simulator"
-      - xcodebuild -workspace Bugsnag\ Test\ App.xcworkspace -scheme Bugsnag\ Test\ App -configuration Debug -destination generic/platform=iOS\ Simulator -derivedDataPath DerivedData -quiet build GCC_TREAT_WARNINGS_AS_ERRORS=YES
+      - xcodebuild -workspace objective-c-ios.xcworkspace -scheme objective-c-ios -configuration Debug -destination generic/platform=iOS\ Simulator -derivedDataPath DerivedData -quiet build GCC_TREAT_WARNINGS_AS_ERRORS=YES
 
   - label: 'examples/objective-c-osx'
     agents:
@@ -295,9 +291,9 @@ steps:
       - echo "--- Pod install"
       - pod install
       - echo "+++ Build Release iOS"
-      - xcodebuild -workspace bugsnag-example.xcworkspace -scheme bugsnag-example -configuration Release -destination generic/platform=iOS -derivedDataPath DerivedData -quiet build GCC_TREAT_WARNINGS_AS_ERRORS=YES
+      - xcodebuild -workspace swift-ios.xcworkspace -scheme swift-ios -configuration Release -destination generic/platform=iOS -derivedDataPath DerivedData -quiet build GCC_TREAT_WARNINGS_AS_ERRORS=YES
       - echo "+++ Build Debug iOS Simulator"
-      - xcodebuild -workspace bugsnag-example.xcworkspace -scheme bugsnag-example -configuration Debug -destination generic/platform=iOS\ Simulator -derivedDataPath DerivedData -quiet build GCC_TREAT_WARNINGS_AS_ERRORS=YES
+      - xcodebuild -workspace swift-ios.xcworkspace -scheme swift-ios -configuration Debug -destination generic/platform=iOS\ Simulator -derivedDataPath DerivedData -quiet build GCC_TREAT_WARNINGS_AS_ERRORS=YES
 
   - label: 'examples/swift-package-manager'
     agents:
@@ -311,3 +307,22 @@ steps:
       - xcodebuild -scheme swift-package-manager -configuration Release -destination generic/platform=iOS -derivedDataPath DerivedData -quiet build GCC_TREAT_WARNINGS_AS_ERRORS=YES
       - echo "+++ Build Debug iOS Simulator"
       - xcodebuild -scheme swift-package-manager -configuration Debug -destination generic/platform=iOS\ Simulator -derivedDataPath DerivedData -quiet build GCC_TREAT_WARNINGS_AS_ERRORS=YES
+
+  - label: 'examples/swiftui'
+    agents:
+      queue: opensource-mac-cocoa-11
+    commands:
+      - cd examples/swiftui
+      - echo "--- Resolve Swift Package Dependencies"
+      - sed -i '' -e 's/kind = branch/kind = revision/' -e "s/branch = master/revision = ${BUILDKITE_COMMIT}/" swiftui.xcodeproj/project.pbxproj
+      - xcodebuild -scheme "swiftui (iOS)" -derivedDataPath DerivedData -resolvePackageDependencies
+      - echo "+++ Build Release iOS"
+      - xcodebuild -scheme "swiftui (iOS)" -configuration Release -destination generic/platform=iOS -derivedDataPath DerivedData -quiet build GCC_TREAT_WARNINGS_AS_ERRORS=YES
+      - echo "+++ Build Debug iOS Simulator"
+      - xcodebuild -scheme "swiftui (iOS)" -configuration Debug -destination generic/platform=iOS\ Simulator -derivedDataPath DerivedData -quiet build GCC_TREAT_WARNINGS_AS_ERRORS=YES
+      - echo "+++ Build Release macOS"
+      - xcodebuild -scheme "swiftui (macOS)" -configuration Release -derivedDataPath DerivedData -quiet build GCC_TREAT_WARNINGS_AS_ERRORS=YES
+      - echo "+++ Build Release tvOS"
+      - xcodebuild -scheme "swiftui (tvOS)" -configuration Release -destination generic/platform=tvOS -derivedDataPath DerivedData -allowProvisioningUpdates -quiet build GCC_TREAT_WARNINGS_AS_ERRORS=YES
+      - echo "+++ Build Debug tvOS Simulator"
+      - xcodebuild -scheme "swiftui (tvOS)" -configuration Debug -destination generic/platform=tvOS\ Simulator -derivedDataPath DerivedData -allowProvisioningUpdates -quiet build GCC_TREAT_WARNINGS_AS_ERRORS=YES

@@ -6,7 +6,7 @@
 //
 //
 
-#import "BSGGlobals.h"
+#import "BSGUtils.h"
 #import "BSG_KSCrashSentry_Private.h"
 #import "BSG_KSJSONCodec.h"
 #import "Bugsnag.h"
@@ -55,7 +55,7 @@ static id JSONObject(void (^ block)(BSG_KSCrashReportWriter *writer)) {
 @end
 
 void awaitBreadcrumbSync(BugsnagBreadcrumbs *crumbs) {
-    dispatch_sync(BSGGlobalsFileSystemQueue(), ^{});
+    dispatch_sync(BSGGetFileSystemQueue(), ^{});
 }
 
 BSGBreadcrumbType BSGBreadcrumbTypeFromString(NSString *value);
@@ -451,6 +451,10 @@ BSGBreadcrumbType BSGBreadcrumbTypeFromString(NSString *value);
 }
 
 - (void)testCrashReportWriterConcurrency {
+#if defined(__has_feature) && __has_feature(thread_sanitizer)
+    NSLog(@"Skipping test because ThreadSanitizer deadlocks if other threads are suspended");
+    return;
+#endif
     //
     // The aim of this test is to ensure that BugsnagBreadcrumbsWriteCrashReport will insert only valid JSON
     // into a crash report when other threads are (paused while) updating the breadcrumbs linked list.
@@ -499,7 +503,14 @@ BSGBreadcrumbType BSGBreadcrumbTypeFromString(NSString *value);
         
         NSError *error = nil;
         NSData *data = [NSData dataWithBytesNoCopy:buffer.buffer length:buffer.length freeWhenDone:NO];
-        XCTAssert([NSJSONSerialization JSONObjectWithData:data options:0 error:&error], @"%@", error);
+        if (![NSJSONSerialization JSONObjectWithData:data options:0 error:&error]) {
+            [self addAttachment:[XCTAttachment attachmentWithUniformTypeIdentifier:@"public.plain-text"
+                                                                              name:@"breadcrumbs.json"
+                                                                           payload:data
+                                                                          userInfo:nil]];
+            XCTFail(@"Breadcrumbs JSON could not be parsed: %@", error);
+            break;
+        }
     }
     
     free(buffer.buffer);

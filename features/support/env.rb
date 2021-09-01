@@ -10,6 +10,22 @@ AfterConfiguration do |_config|
   Maze.config.receive_requests_wait = 180 unless ENV['STRESS_TEST'].nil?
 end
 
+def skip_below(os, version)
+  skip_this_scenario("Skipping scenario") if Maze.driver.capabilities['platformName'] == os and Maze.config.os_version < version
+end
+
+Before('@skip_below_ios_11') do |scenario|
+  skip_below('iOS', 11)
+end
+
+Before('@skip_below_ios_13') do |scenario|
+  skip_below('iOS', 13)
+end
+
+Before('@skip_macos') do |scenario|
+  skip_this_scenario("Skipping scenario") if Maze.driver.capabilities['platformName'] == 'Mac'
+end
+
 # Skip stress tests unless STRESS_TEST env var is set
 Before('@stress_test') do |_scenario|
   skip_this_scenario('Skipping: Run is not configured for stress tests') if ENV['STRESS_TEST'].nil?
