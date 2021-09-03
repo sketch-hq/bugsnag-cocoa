@@ -225,6 +225,14 @@ NS_SWIFT_NAME(leaveBreadcrumb(_:metadata:type:));
  */
 - (void)markLaunchCompleted;
 
+/**
+ * Synchronously uploads all events found in the all exclusive subdirectories (except the ones that are currently locked by the writer).
+ * Subdirectories are deleted after successful upload.
+ * @param configuration The configuration to use. This is mainly used for the API key and upload session.
+ * @returns YES if all crash reports were successfully processed, NO if there was any kind of problem.
+ */
++ (BOOL)synchronouslyUploadExclusiveReportsWithConfiguration:(BugsnagConfiguration * _Nonnull)configuration;
+
 // =============================================================================
 // MARK: - User
 // =============================================================================

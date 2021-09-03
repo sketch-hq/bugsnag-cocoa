@@ -17,6 +17,10 @@ NS_ASSUME_NONNULL_BEGIN
 @property (readonly, nonatomic) NSString *events;
 @property (readonly, nonatomic) NSString *kscrashReports;
 @property (readonly, nonatomic) NSString *sessions;
+/**
+ Absolute path to lock file.
+ */
+@property (readonly, nonatomic) NSString *lockFile;
 
 /**
  * File containing details of the current app hang (if the app is hung)
@@ -49,9 +53,43 @@ NS_ASSUME_NONNULL_BEGIN
  */
 @property (readonly, nonatomic) NSString *systemState;
 
+/**
+ * Returns `YES` if the receiver uses an exclusive subdirectory, `NO` if it uses the shared default directory.
+ */
+@property (readonly, nonatomic) BOOL usesExclusiveSubdirectory;
+/**
+ Initialize the file locations.
+ @param subdirectory If nil, use the regular shared directory. Else use the subdirectory with the given name, inside the `exclusiveDirectoryContainer`.
+ */
+- (instancetype) initWithSubdirectory:(NSString * _Nullable)subdirectory;
+
+/**
+ Get the singleton, initializing it with the given subdirectory. Note that it is an error to call this multiple times with differing values.
+ */
++ (instancetype) currentWithSubdirectory:(NSString * _Nullable)subdirectory;
+/**
+ Get the singleton. If not yet initialized, initializes it with a `nil` subdirectory.
+ */
 + (instancetype) current;
+
 + (instancetype) v1;
 
+/**
+ Get the parent directory of the exclusive subdirectories.
+ */
++ (NSString *)exclusiveDirectoryContainer;
+
+/**
+ Uses a `flock` to get exclusive ownership to write to this directory. This method blocks until it succeeds taking the lock.
+ If any error occurs in the process, returns `NO` immediately.
+ */
+- (BOOL)lockForWritingBlocking;
+
+/**
+ Attempts to take a `flock` to get exclusive ownership to process to this directory. This method does *not* block.
+ If taking the lock fails, or if an error occurs, this method returns `NO`.
+ */
+- (BOOL)tryLockForProcessing;
 @end
 
 NS_ASSUME_NONNULL_END
