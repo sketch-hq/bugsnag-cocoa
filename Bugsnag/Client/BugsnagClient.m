@@ -937,7 +937,7 @@ __attribute__((annotate("oclint:suppress[too many methods]")))
         [self.eventUploader storeEvent:event];
         // Replicate previous delivery mechanism's behaviour of waiting 1 second before delivering the event.
         // This should prevent potential duplicate uploads of unhandled errors where the app subsequently terminates.
-        if (self.configuration.suppressNetworkOperations) {
+        if (!self.configuration.suppressNetworkOperations) {
             [self.eventUploader uploadStoredEventsAfterDelay:1];
         }
     } else {
