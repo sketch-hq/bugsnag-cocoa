@@ -2460,7 +2460,7 @@
 		00AD1C6924869B0E00A27979 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 1310;
+				LastUpgradeCheck = 1320;
 				ORGANIZATIONNAME = "Bugsnag Inc.";
 				TargetAttributes = {
 					00AD1C7124869B0E00A27979 = {
