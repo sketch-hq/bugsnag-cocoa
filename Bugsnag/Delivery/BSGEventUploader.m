@@ -114,44 +114,48 @@
 
     // Enumerate subdirectories.
     for (NSString *item in contents) {
-        NSString *fullItemPath = [container stringByAppendingPathComponent:item];
-        BOOL isDirectory;
-        if (![fm fileExistsAtPath:fullItemPath isDirectory:&isDirectory] || !isDirectory) {
-            continue;
-        }
+        @autoreleasepool {
+            NSString *fullItemPath = [container stringByAppendingPathComponent:item];
+            BOOL isDirectory;
+            if (![fm fileExistsAtPath:fullItemPath isDirectory:&isDirectory] || !isDirectory) {
+                continue;
+            }
 
-        // Instantiate locations for this subdirectory.
-        BSGFileLocations *locations = [[BSGFileLocations alloc] initWithSubdirectory:item];
+            // Instantiate locations for this subdirectory.
+            BSGFileLocations *locations = [[BSGFileLocations alloc] initWithSubdirectory:item];
 
-        // Lock the directory. If locking fails, it might indicate that the writer is still writing to it.
-        // In that case, we simply ignore it. A future upload should deal with the directory once the lock is released.
-        if (![locations tryLockForProcessing]) {
-            continue;
-        }
+            // Lock the directory. If locking fails, it might indicate that the writer is still writing to it.
+            // In that case, we simply ignore it. A future upload should deal with the directory once the lock is released.
+            NSFileHandle *processingLock = [locations tryLockForProcessing];
+            if (!processingLock) {
+                continue;
+            }
 
-        bsg_log_info(@"processing events in exclusive subdirectory %@", item);
+            bsg_log_info(@"processing events in exclusive subdirectory %@", item);
 
-        // We make a copy of the configuration which has the exclusive subdirectory set to our value.
-        // At the time of writing, this is not strictly necessary, but seems cleaner.
-        BugsnagConfiguration *subConfiguration = [configuration copy];
-        subConfiguration.exclusiveSubdirectory = item;
+            // We make a copy of the configuration which has the exclusive subdirectory set to our value.
+            // At the time of writing, this is not strictly necessary, but seems cleaner.
+            BugsnagConfiguration *subConfiguration = [configuration copy];
+            subConfiguration.exclusiveSubdirectory = item;
 
-        // Init an uploader for our subdirectory.
-        BSGEventUploader *uploader = [[self alloc] initWithConfiguration:subConfiguration eventsDirectory:locations.events crashReportsDirectory:locations.kscrashReports notifier:notifier];
+            // Init an uploader for our subdirectory.
+            BSGEventUploader *uploader = [[self alloc] initWithConfiguration:subConfiguration eventsDirectory:locations.events crashReportsDirectory:locations.kscrashReports notifier:notifier];
 
-        // Upload any events.
-        [uploader synchronouslyUploadEvents];
+            // Upload any events.
+            [uploader synchronouslyUploadEvents];
 
-        // If we managed to upload all events successfully, we delete this subdirectory.
-        if ([uploader sortedEventFiles].count == 0) {
-            if (![fm removeItemAtPath:fullItemPath error:&error]) {
-                bsg_log_err(@"failed to delete exclusive event directory after upload: %@", error);
+            // If we managed to upload all events successfully, we delete this subdirectory.
+            if ([uploader sortedEventFiles].count == 0) {
+                if (![fm removeItemAtPath:fullItemPath error:&error]) {
+                    bsg_log_err(@"failed to delete exclusive event directory after upload: %@", error);
+                    success = NO;
+                }
+            } else {
+                // Most likely cause is that we failed to upload because of a network error.
+                bsg_log_err(@"failed to process all events in subdirectory %@", item);
                 success = NO;
             }
-        } else {
-            // Most likely cause is that we failed to upload because of a network error.
-            bsg_log_err(@"failed to process all events in subdirectory %@", item);
-            success = NO;
+            [processingLock closeFile];
         }
     }
     return success;
