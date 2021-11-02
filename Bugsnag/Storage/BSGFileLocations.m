@@ -174,18 +174,16 @@ static dispatch_once_t onceToken;
     return YES;
 }
 
-- (BOOL)tryLockForProcessing {
+- (nullable NSFileHandle *)tryLockForProcessing {
     // Open and lock the lock file. Fail if file does not exist. Do not block.
     int fd = open(self.lockFile.UTF8String, O_RDONLY | O_EXLOCK | O_NONBLOCK, S_IRUSR | S_IWUSR);
 
     if (fd < 0 ) {
-        bsg_log_info(@"failed to lock for processing res: %i error: %s", fd, strerror(errno));
-        return NO;
+        // We failed to lock, probably another process in writing to it right now.
+        return nil;
     }
 
-    // NOTE: We currently "leak" the file descriptor here, since currently we don't ever want to unlock
-    // until we quit.
-    return YES;
+    return [[NSFileHandle alloc] initWithFileDescriptor:fd closeOnDealloc:YES];
 }
 
 - (BOOL)usesExclusiveSubdirectory {

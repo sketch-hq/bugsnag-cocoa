@@ -87,9 +87,10 @@ NS_ASSUME_NONNULL_BEGIN
 
 /**
  Attempts to take a `flock` to get exclusive ownership to process to this directory. This method does *not* block.
- If taking the lock fails, or if an error occurs, this method returns `NO`.
+ @return If locking succeeds, returns an NSFileHandle to the lock file, `nil` otherwise. To save resources, the handle should
+ be closed once processing has finished.
  */
-- (BOOL)tryLockForProcessing;
+- (nullable NSFileHandle *)tryLockForProcessing;
 @end
 
 NS_ASSUME_NONNULL_END
