@@ -2460,7 +2460,7 @@
 		00AD1C6924869B0E00A27979 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 1340;
+				LastUpgradeCheck = 1400;
 				ORGANIZATIONNAME = "Bugsnag Inc.";
 				TargetAttributes = {
 					00AD1C7124869B0E00A27979 = {
@@ -3380,7 +3380,7 @@
 					"@executable_path/../Frameworks",
 					"@loader_path/Frameworks",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 10.11;
+				MACOSX_DEPLOYMENT_TARGET = 11.0;
 				PRODUCT_NAME = Bugsnag;
 				RUN_CLANG_STATIC_ANALYZER = NO;
 				SDKROOT = macosx;
@@ -3405,7 +3405,7 @@
 					"@executable_path/../Frameworks",
 					"@loader_path/Frameworks",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 10.11;
+				MACOSX_DEPLOYMENT_TARGET = 11.0;
 				PRODUCT_NAME = Bugsnag;
 				RUN_CLANG_STATIC_ANALYZER = NO;
 				SDKROOT = macosx;
