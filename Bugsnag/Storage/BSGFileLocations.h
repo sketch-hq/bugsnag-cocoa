@@ -28,6 +28,11 @@ NS_ASSUME_NONNULL_BEGIN
 @property (readonly, nonatomic) NSString *appHangEvent;
 
 /**
+* File containing details of the document serialization information
+ */
+@property (readonly, nonatomic) NSString *documentSerializationInformation;
+
+/**
  * File whose presence indicates that the libary at least attempted to handle the last
  * crash (in case it crashed before writing enough information).
  */
