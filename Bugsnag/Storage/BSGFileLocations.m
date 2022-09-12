@@ -141,6 +141,7 @@ static dispatch_once_t onceToken;
         _kscrashReports = getAndCreateSubdir(root, @"KSCrashReports");
         _kvStore = getAndCreateSubdir(root, @"kvstore");
         _appHangEvent = [root stringByAppendingPathComponent:@"app_hang.json"];
+        _documentSerializationInformation = [root stringByAppendingPathComponent:@"app_document_serialization.json"];
         _flagHandledCrash = [root stringByAppendingPathComponent:@"bugsnag_handled_crash.txt"];
         _configuration = [root stringByAppendingPathComponent:@"config.json"];
         _metadata = [root stringByAppendingPathComponent:@"metadata.json"];

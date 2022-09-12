@@ -83,6 +83,11 @@
 #import "BSGUIKit.h"
 #elif BSG_PLATFORM_OSX
 #import "BSGAppKit.h"
+// #46005 — This is a method that Apple tells us to use to debug hangs with document,
+// although we are supposed to use it within a debugger, it also works during a hang,
+// so lets tell the compiler we do exist.
+APPKIT_EXTERN id _NSDocumentSerializationInfo(void);
+
 #endif
 
 static NSString *const BSTabCrash = @"crash";
@@ -1188,6 +1193,15 @@ __attribute__((annotate("oclint:suppress[too many methods]")))
     if (![BSGJSONSerialization writeJSONObject:json toFile:BSGFileLocations.current.appHangEvent options:0 error:&writeError]) {
         bsg_log_err(@"Could not write app_hang.json: %@", error);
     }
+    
+#if BSG_PLATFORM_OSX
+    // #46005 — write the document serialization information to disk ready for reading
+    // when the app relaunches.
+    NSDictionary *serializationInformation = @{@"info": (NSString *)_NSDocumentSerializationInfo()};
+    if (![BSGJSONSerialization writeJSONObject:serializationInformation toFile:BSGFileLocations.current.documentSerializationInformation options:0 error:&writeError]) {
+        bsg_log_err(@"Could not write document_serialization.json: %@", error);
+    }
+#endif
 }
 
 - (void)appHangEnded {
@@ -1236,6 +1250,14 @@ __attribute__((annotate("oclint:suppress[too many methods]")))
                                                                    unhandled:YES
                                                          unhandledOverridden:NO
                                                                    attrValue:nil];
+#if BSG_PLATFORM_OSX
+    // #46005 — inject document serialization information if it exists into the event
+    NSDictionary *serializationInfo = [BSGJSONSerialization JSONObjectWithContentsOfFile:BSGFileLocations.current.documentSerializationInformation options:0 error:&error];
+    if (serializationInfo) {
+        [event addMetadata:serializationInfo toSection:@"Document Serialization"];
+    }
+#endif
+    
     event.session.unhandledCount++;
 
     return event;

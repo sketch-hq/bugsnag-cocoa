@@ -788,6 +788,7 @@
 		3A700AF824A6492F0068CD1B /* BugsnagError.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 3A700A9124A63A8E0068CD1B /* BugsnagError.h */; };
 		3A700AF924A6492F0068CD1B /* BugsnagDeviceWithState.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 3A700A9224A63A8E0068CD1B /* BugsnagDeviceWithState.h */; };
 		3A700AFA24A6492F0068CD1B /* BugsnagMetadata.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 3A700A9324A63A8E0068CD1B /* BugsnagMetadata.h */; };
+		59041E9E28B7AFC600F3B9A8 /* AppKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 59041E9D28B7AFC600F3B9A8 /* AppKit.framework */; };
 		CB10E53F250BA8DE00AF5824 /* BugsnagKVStoreTest.m in Sources */ = {isa = PBXBuildFile; fileRef = CBAA6AB9250BA6B100713376 /* BugsnagKVStoreTest.m */; };
 		CB10E540250BA8DF00AF5824 /* BugsnagKVStoreTest.m in Sources */ = {isa = PBXBuildFile; fileRef = CBAA6AB9250BA6B100713376 /* BugsnagKVStoreTest.m */; };
 		CB10E541250BA8E000AF5824 /* BugsnagKVStoreTest.m in Sources */ = {isa = PBXBuildFile; fileRef = CBAA6AB9250BA6B100713376 /* BugsnagKVStoreTest.m */; };
@@ -1366,6 +1367,7 @@
 		3A700A9124A63A8E0068CD1B /* BugsnagError.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = BugsnagError.h; sourceTree = "<group>"; };
 		3A700A9224A63A8E0068CD1B /* BugsnagDeviceWithState.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = BugsnagDeviceWithState.h; sourceTree = "<group>"; };
 		3A700A9324A63A8E0068CD1B /* BugsnagMetadata.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = BugsnagMetadata.h; sourceTree = "<group>"; };
+		59041E9D28B7AFC600F3B9A8 /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX12.3.sdk/System/Library/Frameworks/AppKit.framework; sourceTree = DEVELOPER_DIR; };
 		CB6419AA25A73E8C00613D25 /* BSGStorageMigratorTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = BSGStorageMigratorTests.m; sourceTree = "<group>"; };
 		CB6419B325A7419400613D25 /* v0_files */ = {isa = PBXFileReference; lastKnownFileType = folder; path = v0_files; sourceTree = "<group>"; };
 		CB9103632502320A00E9D1E2 /* BugsnagApiClientTest.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = BugsnagApiClientTest.m; sourceTree = "<group>"; };
@@ -1428,6 +1430,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				59041E9E28B7AFC600F3B9A8 /* AppKit.framework in Frameworks */,
 				E746292F24890C3900F92D67 /* SystemConfiguration.framework in Frameworks */,
 				E746293224890C5200F92D67 /* libz.tbd in Frameworks */,
 				E746293324890C5700F92D67 /* libc++.tbd in Frameworks */,
@@ -1995,6 +1998,7 @@
 		E746292324890BFE00F92D67 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				59041E9D28B7AFC600F3B9A8 /* AppKit.framework */,
 				E746293A24890C7900F92D67 /* libz.tbd */,
 				E746293824890C7000F92D67 /* libc++.tbd */,
 				E746293624890C6B00F92D67 /* SystemConfiguration.framework */,
