@@ -98,6 +98,3 @@ WARNING_CFLAGS = -Wcast-qual -Wconditional-uninitialized -Wcustom-atomic-propert
 //  -Wcstring-format-directive      warns when a %s format string is used to construct a CF/NSString, despite them being supported.
 //  -Wpadded                        warns when struct padding is added by the compiler, a common occurrence and not a programming error.
 //
-
-// Overridden for Build-For-Profile
-ONLY_ACTIVE_ARCH[config=Profile] = YES
