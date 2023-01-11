@@ -277,6 +277,14 @@ NSString * const BSGNotificationBreadcrumbsMessageAppWillTerminate = @"App Will 
     }
 #endif
 
+#if TARGET_OS_OSX
+  if ([notification.name hasPrefix:@"NSWindow"]) {
+    NSObject *object = (NSObject*)notification.object;
+    NSDictionary *objectType = @{ @"Window objectClass" : NSStringFromClass(object.class) };
+    [self addBreadcrumbWithType:BSGBreadcrumbTypeState forNotificationName:notification.name metadata:objectType];
+    return;
+  }
+#endif
     [self addBreadcrumbWithType:BSGBreadcrumbTypeState forNotificationName:notification.name];
 }
 
