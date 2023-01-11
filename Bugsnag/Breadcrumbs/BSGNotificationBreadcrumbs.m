@@ -277,23 +277,6 @@ NSString * const BSGNotificationBreadcrumbsMessageAppWillTerminate = @"App Will 
     }
 #endif
 
-// Sketch changes.
-#if TARGET_OS_OSX
-  if ([notification.name hasPrefix:@"NSWindow"]) {
-    NSObject *object = (NSObject*)notification.object;
-    NSDictionary *objectType = @{ @"Window objectClass" : NSStringFromClass(object.class) };
-    [self addBreadcrumbWithType:BSGBreadcrumbTypeState forNotificationName:notification.name metadata:objectType];
-    return;
-  }
-
-  if ([notification.name hasPrefix:@"NSMenu"]) {
-    NSObject *object = (NSObject*)notification.object;
-    NSDictionary *objectType = @{ @"NSMenu objectClass" : NSStringFromClass(object.class) };
-    [self addBreadcrumbWithType:BSGBreadcrumbTypeState forNotificationName:notification.name metadata:objectType];
-    return;
-  }
-
-#endif
     [self addBreadcrumbWithType:BSGBreadcrumbTypeState forNotificationName:notification.name];
 }
 
@@ -323,16 +306,6 @@ NSString * const BSGNotificationBreadcrumbsMessageAppWillTerminate = @"App Will 
     [self addBreadcrumbWithType:BSGBreadcrumbTypeUser forNotificationName:notification.name metadata:
      label.length ? @{BSGKeyLabel : label} : nil];
 #elif TARGET_OS_OSX
-  /*
-    NSControl *control = notification.object;
-    NSDictionary *metadata = nil;
-    if ([control respondsToSelector:@selector(accessibilityLabel)]) {
-        NSString *label = control.accessibilityLabel;
-        if (label.length > 0) {
-            metadata = @{BSGKeyLabel : label};
-        }
-    }
-   */
   NSControl *control = notification.object;
   NSMutableDictionary *dict = NSMutableDictionary.new;
   if ([control respondsToSelector:@selector(accessibilityLabel)]) {
@@ -341,7 +314,7 @@ NSString * const BSGNotificationBreadcrumbsMessageAppWillTerminate = @"App Will 
           [dict setObject:label forKey:BSGKeyLabel];
       }
   }
-  [dict setObject:NSStringFromClass(control.class) forKey:@"ControlClass"];
+  [dict setObject:NSStringFromClass(control.class) forKey:@"controlClass"];
   NSUserInterfaceItemIdentifier identifier = control.identifier;
   if (identifier) {
     [dict setObject:identifier forKey:@"controlIdentifier"];
