@@ -242,7 +242,7 @@ void bsg_ksmach_init(void) {
     }
 }
 
-thread_t bsg_ksmachthread_self() {
+thread_t bsg_ksmachthread_self(void) {
     thread_t thread_self = mach_thread_self();
     mach_port_deallocate(mach_task_self(), thread_self);
     return thread_self;

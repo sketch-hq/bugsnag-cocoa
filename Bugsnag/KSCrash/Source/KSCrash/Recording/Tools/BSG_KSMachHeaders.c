@@ -39,7 +39,7 @@ static BSG_Mach_Header_Info *bsg_g_mach_headers_images_head;
 static BSG_Mach_Header_Info *bsg_g_mach_headers_images_tail;
 static dispatch_queue_t bsg_g_serial_queue;
 
-BSG_Mach_Header_Info *bsg_mach_headers_get_images() {
+BSG_Mach_Header_Info *bsg_mach_headers_get_images(void) {
     if (!bsg_g_mach_headers_images_head) {
         bsg_mach_headers_initialize();
         bsg_mach_headers_register_for_changes();
@@ -47,7 +47,7 @@ BSG_Mach_Header_Info *bsg_mach_headers_get_images() {
     return bsg_g_mach_headers_images_head;
 }
 
-BSG_Mach_Header_Info *bsg_mach_headers_get_main_image() {
+BSG_Mach_Header_Info *bsg_mach_headers_get_main_image(void) {
     BSG_Mach_Header_Info *img = bsg_mach_headers_get_images();
     while (img && !img->isMain) {
         img = img->next;
@@ -55,7 +55,7 @@ BSG_Mach_Header_Info *bsg_mach_headers_get_main_image() {
     return img;
 }
 
-void bsg_mach_headers_initialize() {
+void bsg_mach_headers_initialize(void) {
     
     // Clear any existing headers to reset the head/tail pointers
     for (BSG_Mach_Header_Info *img = bsg_g_mach_headers_images_head; img != NULL; ) {
@@ -69,7 +69,7 @@ void bsg_mach_headers_initialize() {
     bsg_g_serial_queue = dispatch_queue_create("com.bugsnag.mach-headers", DISPATCH_QUEUE_SERIAL);
 }
 
-void bsg_mach_headers_register_for_changes() {
+void bsg_mach_headers_register_for_changes(void) {
     
     // Register for binary images being loaded and unloaded. dyld calls the add function once
     // for each library that has already been loaded and then keeps this cache up-to-date
