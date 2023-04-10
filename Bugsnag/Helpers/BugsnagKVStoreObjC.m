@@ -11,7 +11,7 @@
 #import "BSGFileLocations.h"
 #import "BugsnagLogger.h"
 
-static void bsgkv_init() {
+static void bsgkv_init(void) {
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
         const char *kvstoreDir = [[BSGFileLocations current].kvStore UTF8String];
