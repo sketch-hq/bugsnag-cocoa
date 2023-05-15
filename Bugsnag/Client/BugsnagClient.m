@@ -86,8 +86,10 @@
 // #46005 — This is a method that Apple tells us to use to debug hangs with document,
 // although we are supposed to use it within a debugger, it also works during a hang,
 // so lets tell the compiler we do exist.
+// Now excluded for non debug builds to meet requirements for MAS.
+#if DEBUG
 APPKIT_EXTERN id _NSDocumentSerializationInfo(void);
-
+#endif // SKETCH_VARIANT == SKETCH_VARIANT_APPSTORE
 #endif
 
 static NSString *const BSTabCrash = @"crash";
@@ -1197,10 +1199,12 @@ __attribute__((annotate("oclint:suppress[too many methods]")))
 #if BSG_PLATFORM_OSX
     // #46005 — write the document serialization information to disk ready for reading
     // when the app relaunches.
+#if DEBUG
     NSDictionary *serializationInformation = @{@"info": (NSString *)_NSDocumentSerializationInfo()};
     if (![BSGJSONSerialization writeJSONObject:serializationInformation toFile:BSGFileLocations.current.documentSerializationInformation options:0 error:&writeError]) {
         bsg_log_err(@"Could not write document_serialization.json: %@", error);
     }
+#endif // DEBUG
 #endif
 }
 
