@@ -522,6 +522,7 @@ int bsg_ksjsoncodecobjc_i_encodeObject(BSG_KSJSONCodec *codec, id object,
     }
 }
 
+#ifndef __clang_analyzer__
 + (id)decode:(NSData *)JSONData
        error:(NSError *__autoreleasing *)error {
     *error = nil;
@@ -537,5 +538,6 @@ int bsg_ksjsoncodecobjc_i_encodeObject(BSG_KSJSONCodec *codec, id object,
     }
     return result;
 }
+#endif
 
 @end
