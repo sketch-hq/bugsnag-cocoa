@@ -891,12 +891,8 @@
 		E746291C248907E500F92D67 /* BSG_KSCrashC.c in Sources */ = {isa = PBXBuildFile; fileRef = 0089694B2486DAD000DC48C2 /* BSG_KSCrashC.c */; };
 		E746292524890BFE00F92D67 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E746292424890BFE00F92D67 /* Foundation.framework */; };
 		E746292724890C1100F92D67 /* SystemConfiguration.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E746292624890C1100F92D67 /* SystemConfiguration.framework */; };
-		E746292924890C1500F92D67 /* libc++.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = E746292824890C1500F92D67 /* libc++.tbd */; };
-		E746292B24890C1A00F92D67 /* libz.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = E746292A24890C1A00F92D67 /* libz.tbd */; };
 		E746292D24890C3300F92D67 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E746292C24890C3300F92D67 /* Foundation.framework */; };
 		E746292F24890C3900F92D67 /* SystemConfiguration.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E746292E24890C3900F92D67 /* SystemConfiguration.framework */; };
-		E746293224890C5200F92D67 /* libz.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = E746293124890C4300F92D67 /* libz.tbd */; };
-		E746293324890C5700F92D67 /* libc++.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = E746293024890C3D00F92D67 /* libc++.tbd */; };
 		E746293524890C6500F92D67 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E746293424890C6500F92D67 /* Foundation.framework */; };
 		E746293724890C6B00F92D67 /* SystemConfiguration.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E746293624890C6B00F92D67 /* SystemConfiguration.framework */; };
 		E746293924890C7400F92D67 /* libc++.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = E746293824890C7000F92D67 /* libc++.tbd */; };
@@ -1411,8 +1407,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				E746292B24890C1A00F92D67 /* libz.tbd in Frameworks */,
-				E746292924890C1500F92D67 /* libc++.tbd in Frameworks */,
 				E746292724890C1100F92D67 /* SystemConfiguration.framework in Frameworks */,
 				E746292524890BFE00F92D67 /* Foundation.framework in Frameworks */,
 			);
@@ -1432,8 +1426,6 @@
 			files = (
 				59041E9E28B7AFC600F3B9A8 /* AppKit.framework in Frameworks */,
 				E746292F24890C3900F92D67 /* SystemConfiguration.framework in Frameworks */,
-				E746293224890C5200F92D67 /* libz.tbd in Frameworks */,
-				E746293324890C5700F92D67 /* libc++.tbd in Frameworks */,
 				E746292D24890C3300F92D67 /* Foundation.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -3300,6 +3292,7 @@
 					"@loader_path/Frameworks",
 				);
 				MODULEMAP_FILE = "$(PROJECT_DIR)/Framework/module.modulemap";
+				OTHER_LDFLAGS = "-ObjC";
 				SKIP_INSTALL = YES;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -3324,6 +3317,7 @@
 					"@loader_path/Frameworks",
 				);
 				MODULEMAP_FILE = "$(PROJECT_DIR)/Framework/module.modulemap";
+				OTHER_LDFLAGS = "-ObjC";
 				SKIP_INSTALL = YES;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -3340,6 +3334,7 @@
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
+				OTHER_LDFLAGS = "-ObjC";
 				PRODUCT_BUNDLE_IDENTIFIER = com.bugsnag.BugsnagTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_OBJC_BRIDGING_HEADER = "Tests/Swift Tests/Tests-Bridging-Header.h";
@@ -3359,6 +3354,7 @@
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
+				OTHER_LDFLAGS = "-ObjC";
 				PRODUCT_BUNDLE_IDENTIFIER = com.bugsnag.BugsnagTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_OBJC_BRIDGING_HEADER = "Tests/Swift Tests/Tests-Bridging-Header.h";
@@ -3385,6 +3381,7 @@
 					"@loader_path/Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 12.0;
+				OTHER_LDFLAGS = "-ObjC";
 				PRODUCT_NAME = Bugsnag;
 				RUN_CLANG_STATIC_ANALYZER = NO;
 				SDKROOT = macosx;
@@ -3410,6 +3407,7 @@
 					"@loader_path/Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 12.0;
+				OTHER_LDFLAGS = "-ObjC";
 				PRODUCT_NAME = Bugsnag;
 				RUN_CLANG_STATIC_ANALYZER = NO;
 				SDKROOT = macosx;
@@ -3429,6 +3427,7 @@
 					"@loader_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 12.0;
+				OTHER_LDFLAGS = "-ObjC";
 				PRODUCT_BUNDLE_IDENTIFIER = "com.bugsnag.Bugsnag-macOSTests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
@@ -3449,6 +3448,7 @@
 					"@loader_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 12.0;
+				OTHER_LDFLAGS = "-ObjC";
 				PRODUCT_BUNDLE_IDENTIFIER = "com.bugsnag.Bugsnag-macOSTests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
