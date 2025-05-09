@@ -327,9 +327,6 @@ NSString * const BSGNotificationBreadcrumbsMessageAppWillTerminate = @"App Will 
   if (identifier) {
     [dict setObject:identifier forKey:@"controlIdentifier"];
   }
-  if (control.stringValue.length) {
-    [dict setObject:control.stringValue forKey:@"stringValue"];
-  }
   [self addBreadcrumbWithType:BSGBreadcrumbTypeUser forNotificationName:notification.name metadata:dict];
 #endif
 }
