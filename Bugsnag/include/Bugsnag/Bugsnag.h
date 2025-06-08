@@ -29,12 +29,14 @@
 #import <Bugsnag/BugsnagAppWithState.h>
 #import <Bugsnag/BugsnagClient.h>
 #import <Bugsnag/BugsnagConfiguration.h>
+#import <Bugsnag/BugsnagDefines.h>
 #import <Bugsnag/BugsnagDevice.h>
 #import <Bugsnag/BugsnagDeviceWithState.h>
 #import <Bugsnag/BugsnagEndpointConfiguration.h>
 #import <Bugsnag/BugsnagError.h>
 #import <Bugsnag/BugsnagErrorTypes.h>
 #import <Bugsnag/BugsnagEvent.h>
+#import <Bugsnag/BugsnagFeatureFlag.h>
 #import <Bugsnag/BugsnagLastRunInfo.h>
 #import <Bugsnag/BugsnagMetadata.h>
 #import <Bugsnag/BugsnagPlugin.h>
@@ -45,6 +47,7 @@
 /**
  * Static access to a Bugsnag Client, the easiest way to use Bugsnag in your app.
  */
+BUGSNAG_EXTERN
 @interface Bugsnag : NSObject <BugsnagClassLevelMetadataStore>
 
 /**
@@ -102,7 +105,13 @@
 /**
  * @return YES if Bugsnag has been started and the previous launch crashed
  */
-+ (BOOL)appDidCrashLastLaunch __attribute__((deprecated("use 'lastRunInfo.crashed' instead")));
++ (BOOL)appDidCrashLastLaunch BUGSNAG_DEPRECATED_WITH_REPLACEMENT("lastRunInfo.crashed");
+
+/**
+ * @return YES if and only if a Bugsnag.start() has been called
+ * and Bugsnag has initialized such that any calls to the Bugsnag methods can succeed
+ */
++ (BOOL)isStarted;
 
 /**
  * Information about the last run of the app, and whether it crashed.
@@ -182,13 +191,22 @@
  * a type.
  *
  * @param message The log message to leave.
- * @param metadata Additional metadata included with the breadcrumb.
+ * @param metadata Diagnostic data relating to the breadcrumb.
+ *                 Values should be serializable to JSON with NSJSONSerialization.
  * @param type A BSGBreadcrumbTypeValue denoting the type of breadcrumb.
  */
 + (void)leaveBreadcrumbWithMessage:(NSString *_Nonnull)message
                           metadata:(NSDictionary *_Nullable)metadata
                            andType:(BSGBreadcrumbType)type
     NS_SWIFT_NAME(leaveBreadcrumb(_:metadata:type:));
+
+/**
+ * Leave a "breadcrumb" log message representing a completed network request.
+ */
++ (void)leaveNetworkRequestBreadcrumbForTask:(nonnull NSURLSessionTask *)task
+                                     metrics:(nonnull NSURLSessionTaskMetrics *)metrics
+    API_AVAILABLE(macosx(10.12), ios(10.0), watchos(3.0), tvos(10.0))
+    NS_SWIFT_NAME(leaveNetworkRequestBreadcrumb(task:metrics:));
 
 /**
  * Returns the current buffer of breadcrumbs that will be sent with captured events. This
@@ -287,10 +305,30 @@
  *  @param userId ID of the user
  *  @param name   Name of the user
  *  @param email  Email address of the user
+ *
+ *  If user ID is nil, a Bugsnag-generated Device ID is used for the `user.id` property of events and sessions.
  */
 + (void)setUser:(NSString *_Nullable)userId
        withEmail:(NSString *_Nullable)email
        andName:(NSString *_Nullable)name;
+
+// =============================================================================
+// MARK: - Feature flags
+// =============================================================================
+
++ (void)addFeatureFlagWithName:(nonnull NSString *)name variant:(nullable NSString *)variant
+    NS_SWIFT_NAME(addFeatureFlag(name:variant:));
+
++ (void)addFeatureFlagWithName:(nonnull NSString *)name
+    NS_SWIFT_NAME(addFeatureFlag(name:));
+
++ (void)addFeatureFlags:(nonnull NSArray<BugsnagFeatureFlag *> *)featureFlags
+    NS_SWIFT_NAME(addFeatureFlags(_:));
+
++ (void)clearFeatureFlagWithName:(nonnull NSString *)name
+    NS_SWIFT_NAME(clearFeatureFlag(name:));
+
++ (void)clearFeatureFlags;
 
 // =============================================================================
 // MARK: - onSession
@@ -300,16 +338,25 @@
  *  Add a callback to be invoked before a session is sent to Bugsnag.
  *
  *  @param block A block which can modify the session
+ *
+ *  @returns An opaque reference to the callback which can be passed to `removeOnSession:`
  */
-+ (void)addOnSessionBlock:(BugsnagOnSessionBlock _Nonnull)block
++ (nonnull BugsnagOnSessionRef)addOnSessionBlock:(nonnull BugsnagOnSessionBlock)block
     NS_SWIFT_NAME(addOnSession(block:));
 
 /**
  * Remove a callback that would be invoked before a session is sent to Bugsnag.
  *
- * @param block The block to be removed.
+ * @param callback The opaque reference of the callback, returned by `addOnSessionBlock:`
+ */
++ (void)removeOnSession:(nonnull BugsnagOnSessionRef)callback
+    NS_SWIFT_NAME(removeOnSession(_:));
+
+/**
+ * Deprecated
  */
 + (void)removeOnSessionBlock:(BugsnagOnSessionBlock _Nonnull)block
+    BUGSNAG_DEPRECATED_WITH_REPLACEMENT("removeOnSession:")
     NS_SWIFT_NAME(removeOnSession(block:));
 
 // =============================================================================
@@ -321,16 +368,25 @@
  *  change the breadcrumb contents as needed
  *
  *  @param block A block which returns YES if the breadcrumb should be captured
+ *
+ *  @returns An opaque reference to the callback which can be passed to `removeOnBreadcrumb:`
  */
-+ (void)addOnBreadcrumbBlock:(BugsnagOnBreadcrumbBlock _Nonnull)block
++ (nonnull BugsnagOnBreadcrumbRef)addOnBreadcrumbBlock:(nonnull BugsnagOnBreadcrumbBlock)block
     NS_SWIFT_NAME(addOnBreadcrumb(block:));
 
 /**
  * Remove the callback that would be invoked when a breadcrumb is captured.
  *
- * @param block The block to be removed.
+ * @param callback The opaque reference of the callback, returned by `addOnBreadcrumbBlock:`
+ */
++ (void)removeOnBreadcrumb:(nonnull BugsnagOnBreadcrumbRef)callback
+    NS_SWIFT_NAME(removeOnBreadcrumb(_:));
+
+/**
+ * Deprecated
  */
 + (void)removeOnBreadcrumbBlock:(BugsnagOnBreadcrumbBlock _Nonnull)block
+    BUGSNAG_DEPRECATED_WITH_REPLACEMENT("removeOnBreadcrumb:")
     NS_SWIFT_NAME(removeOnBreadcrumb(block:));
 
 @end

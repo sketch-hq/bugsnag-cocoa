@@ -24,17 +24,22 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#import "UndefinedInstructionScenario.h"
-#include "spin_malloc.h"
+#import "Scenario.h"
+#import "Logging.h"
+
+#import "spin_malloc.h"
 
 /**
  * Attempt to execute an instruction not to be defined on the current architecture.
  */
+@interface UndefinedInstructionScenario : Scenario
+@end
+
 @implementation UndefinedInstructionScenario
 
-- (void)startBugsnag {
+- (void)configure {
+    [super configure];
     self.config.autoTrackSessions = NO;
-    [super startBugsnag];
 }
 
 - (void)run {

@@ -6,13 +6,17 @@
 //  Copyright © 2020 Bugsnag. All rights reserved.
 //
 
-#import "SIGBUSScenario.h"
+#import "Scenario.h"
+#import "Logging.h"
+
+@interface SIGBUSScenario : Scenario
+@end
 
 @implementation SIGBUSScenario
 
-- (void)startBugsnag {
+- (void)configure {
+    [super configure];
     self.config.autoTrackSessions = NO;
-    [super startBugsnag];
 }
 
 - (void)run {

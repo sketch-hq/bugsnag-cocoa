@@ -10,6 +10,7 @@ let package = Package(
     ],
     products: [
         .library(name: "Bugsnag", targets: ["Bugsnag"]),
+        .library(name: "BugsnagNetworkRequestPlugin", targets: ["BugsnagNetworkRequestPlugin"]),
     ],
     dependencies: [],
     targets: [
@@ -17,13 +18,19 @@ let package = Package(
             name: "Bugsnag",
             dependencies: [],
             path: "Bugsnag",
+            resources: [
+               .process("resources/PrivacyInfo.xcprivacy")
+            ],
             publicHeadersPath: "include",
             cSettings: [
+                .define("NS_BLOCK_ASSERTIONS", .when(configuration: .release)),
+                .define("NDEBUG", .when(configuration: .release)),
                 .headerSearchPath("."),
                 .headerSearchPath("Breadcrumbs"),
                 .headerSearchPath("Client"),
                 .headerSearchPath("Configuration"),
                 .headerSearchPath("Delivery"),
+                .headerSearchPath("FeatureFlags"),
                 .headerSearchPath("Helpers"),
                 .headerSearchPath("include/Bugsnag"),
                 .headerSearchPath("KSCrash"),
@@ -39,6 +46,18 @@ let package = Package(
             linkerSettings: [
                 .linkedLibrary("z"),
                 .linkedLibrary("c++"),
+            ]
+        ),
+        .target(
+            name: "BugsnagNetworkRequestPlugin",
+            dependencies: ["Bugsnag"],
+            path: "BugsnagNetworkRequestPlugin/BugsnagNetworkRequestPlugin",
+            publicHeadersPath: "include",
+            cSettings: [
+                .define("NS_BLOCK_ASSERTIONS", .when(configuration: .release)),
+                .define("NDEBUG", .when(configuration: .release)),
+                .headerSearchPath("."),
+                .headerSearchPath("include/BugsnagNetworkRequestPlugin"),
             ]
         ),
     ],

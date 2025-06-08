@@ -3,12 +3,18 @@
 // Copyright (c) 2018 Bugsnag. All rights reserved.
 //
 
-#import "AutoSessionScenario.h"
+#import "Scenario.h"
+#import "Logging.h"
 
+/**
+ * Sends an automatic session payload to Bugsnag.
+ */
+@interface AutoSessionScenario : Scenario
+@end
 
 @implementation AutoSessionScenario
 
 - (void)run {
-
 }
+
 @end

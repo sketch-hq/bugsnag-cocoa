@@ -11,6 +11,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdatomic.h>
 
 /* Maintaining our own list of framework Mach headers means that we avoid potential
  * deadlock situations where we try and suspend lock-holding threads prior to
@@ -25,7 +26,7 @@ typedef struct bsg_mach_image {
 
     /// The mach_header or mach_header_64
     ///
-    /// This is also the memory address where the image has been loaded by dyld, including slide.
+    /// This is also the memory address where the __TEXT segment has been loaded by dyld, including slide.
     const struct mach_header *header;
 
     /// The vmaddr specified for the __TEXT segment
@@ -47,25 +48,21 @@ typedef struct bsg_mach_image {
 
     /// True if the image has been unloaded and should be ignored
     bool unloaded;
-
-    /// True if this image is a program with an entry point; i.e. LC_MAIN or LC_UNIXTHREAD
-    bool isMain;
+    
+    /// True if the image is referenced by the current crash report.
+    bool inCrashReport;
 
     /// The next image in the linked list
-    struct bsg_mach_image *next;
+    _Atomic(struct bsg_mach_image *) next;
 } BSG_Mach_Header_Info;
 
 // MARK: - Operations
 
 /**
-  * Resets mach header data
+ * Initialize the headers management system.
+ * This MUST be called before calling anything else.
  */
 void bsg_mach_headers_initialize(void);
-
-/**
-  * Registers with dyld to keep data updated when libraries are loaded and unloaded
- */
-void bsg_mach_headers_register_for_changes(void);
 
 /**
  * Returns the head of the link list of headers
@@ -78,14 +75,9 @@ BSG_Mach_Header_Info *bsg_mach_headers_get_images(void);
 BSG_Mach_Header_Info *bsg_mach_headers_get_main_image(void);
 
 /**
- * Called when a binary image is loaded.
+ * Returns the image that contains KSCrash.
  */
-void bsg_mach_headers_add_image(const struct mach_header *mh, intptr_t slide);
-
-/**
- * Called when a binary image is unloaded.
- */
-void bsg_mach_headers_remove_image(const struct mach_header *mh, intptr_t slide);
+BSG_Mach_Header_Info *bsg_mach_headers_get_self_image(void);
 
 /**
  * Find the loaded binary image that contains the specified instruction address.
@@ -113,20 +105,26 @@ BSG_Mach_Header_Info *bsg_mach_headers_image_named(const char *const imageName, 
  */
 uintptr_t bsg_mach_headers_first_cmd_after_header(const struct mach_header *header);
 
-/** Get the segment base address of the specified image.
- *
- * This is required for any symtab command offsets.
- *
- * @param header The header to get commands for.
- * @return The image's base address, or 0 if none was found.
- */
-uintptr_t bsg_mach_headers_image_at_base_of_image_index(const struct mach_header *header);
-
 /** Get the __crash_info message of the specified image.
  *
  * @param header The header to get commands for.
  * @return The __crash_info message, or NULL if no readable message could be found.
  */
 const char *bsg_mach_headers_get_crash_info_message(const BSG_Mach_Header_Info *header);
+
+/**
+ * Resets mach header data (for unit tests).
+ */
+void bsg_test_support_mach_headers_reset(void);
+
+/**
+ * Add a binary image (for unit tests).
+ */
+void bsg_test_support_mach_headers_add_image(const struct mach_header *mh, intptr_t slide);
+
+/**
+ * Remove a binary image (for unit tests).
+ */
+void bsg_test_support_mach_headers_remove_image(const struct mach_header *mh, intptr_t slide);
 
 #endif /* BSG_KSMachHeaders_h */

@@ -3,14 +3,20 @@
 // Copyright (c) 2018 Bugsnag. All rights reserved.
 //
 
-#import "NonExistentMethodScenario.h"
+#import "Scenario.h"
+#import "Logging.h"
 
+/**
+ * Calls a non-existent method on an object
+ */
+@interface NonExistentMethodScenario : Scenario
+@end
 
 @implementation NonExistentMethodScenario
 
-- (void)startBugsnag {
+- (void)configure {
+    [super configure];
     self.config.autoTrackSessions = NO;
-    [super startBugsnag];
 }
 
 - (void)run {

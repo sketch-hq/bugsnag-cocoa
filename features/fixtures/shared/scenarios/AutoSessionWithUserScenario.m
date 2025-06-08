@@ -6,17 +6,20 @@
 //  Copyright © 2018 Bugsnag. All rights reserved.
 //
 
-#import "AutoSessionWithUserScenario.h"
+#import "Scenario.h"
+#import "Logging.h"
+
+@interface AutoSessionWithUserScenario : Scenario
+@end
 
 @implementation AutoSessionWithUserScenario
 
-- (void)startBugsnag {
+- (void)configure {
+    [super configure];
     [self.config setUser:@"123" withEmail:@"joe@example.com" andName:@"Joe Bloggs"];
-    [super startBugsnag];
 }
 
-- (void) run {
-    
+- (void)run {
 }
 
 @end

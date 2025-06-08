@@ -6,17 +6,24 @@
 //  Copyright © 2020 Bugsnag. All rights reserved.
 //
 
-#import "SIGPIPEScenario.h"
+#import "Scenario.h"
+#import "Logging.h"
+
+@interface SIGPIPEScenario : Scenario
+@end
 
 @implementation SIGPIPEScenario
 
-- (void)startBugsnag {
+- (void)configure {
+    [super configure];
     self.config.autoTrackSessions = NO;
-    [super startBugsnag];
 }
 
 - (void)run {
-    raise(SIGPIPE);
+    int pipefds[2];
+    pipe(pipefds);
+    close(pipefds[0]);
+    write(pipefds[1], "hello\n", 6);
 }
 
 @end

@@ -6,7 +6,7 @@
 //  Copyright © 2020 Bugsnag Inc. All rights reserved.
 //
 
-#import "BugsnagDevice.h"
+#import <Bugsnag/BugsnagDevice.h>
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -14,7 +14,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 + (instancetype)deviceWithKSCrashReport:(NSDictionary *)event;
 
-+ (instancetype)deserializeFromJson:(NSDictionary *)json;
++ (instancetype)deserializeFromJson:(nullable NSDictionary *)json;
 
 + (void)populateFields:(BugsnagDevice *)device dictionary:(NSDictionary *)event;
 

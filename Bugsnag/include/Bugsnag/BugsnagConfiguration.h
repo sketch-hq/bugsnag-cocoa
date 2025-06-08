@@ -28,7 +28,9 @@
 
 #import <Bugsnag/BSG_KSCrashReportWriter.h>
 #import <Bugsnag/BugsnagBreadcrumb.h>
+#import <Bugsnag/BugsnagDefines.h>
 #import <Bugsnag/BugsnagEvent.h>
+#import <Bugsnag/BugsnagFeatureFlagStore.h>
 #import <Bugsnag/BugsnagMetadata.h>
 #import <Bugsnag/BugsnagMetadataStore.h>
 #import <Bugsnag/BugsnagPlugin.h>
@@ -62,10 +64,31 @@ typedef NS_ENUM(NSInteger, BSGThreadSendPolicy) {
 };
 
 /**
+ * Types of telemetry that may be sent to Bugsnag for product improvement purposes.
+ */
+typedef NS_OPTIONS(NSUInteger, BSGTelemetryOptions) {
+
+    /**
+     * Errors within the Bugsnag SDK.
+     */
+    BSGTelemetryInternalErrors = (1UL << 0),
+
+    /**
+     * Information about how Bugsnag has been configured.
+     */
+    BSGTelemetryUsage = (1UL << 1),
+
+    /**
+     * All types of telemetry are enabled by default.
+     */
+    BSGTelemetryAll = (BSGTelemetryInternalErrors | BSGTelemetryUsage)
+};
+
+/**
  * Setting `BugsnagConfiguration.appHangThresholdMillis` to this value disables the reporting of
  * app hangs that ended before the app was terminated.
  */
-extern const NSUInteger BugsnagAppHangThresholdFatalOnly;
+BUGSNAG_EXTERN const NSUInteger BugsnagAppHangThresholdFatalOnly API_UNAVAILABLE(watchos);
 
 /**
  *  A configuration block for modifying an error report
@@ -87,11 +110,21 @@ typedef BOOL (^BugsnagOnErrorBlock)(BugsnagEvent *_Nonnull event);
 typedef BOOL (^BugsnagOnSendErrorBlock)(BugsnagEvent *_Nonnull event);
 
 /**
+ * An opaque object that identifies and allows the removal of a BugsnagOnSendErrorBlock.
+ */
+typedef id<NSObject> BugsnagOnSendErrorRef;
+
+/**
  *  A configuration block for modifying a captured breadcrumb
  *
  *  @param breadcrumb The breadcrumb
  */
 typedef BOOL (^BugsnagOnBreadcrumbBlock)(BugsnagBreadcrumb *_Nonnull breadcrumb);
+
+/**
+ * An opaque object that identifies and allows the removal of a BugsnagOnBreadcrumbBlock.
+ */
+typedef id<NSObject> BugsnagOnBreadcrumbRef;
 
 /**
  * A configuration block for modifying a session. Intended for internal usage only.
@@ -100,6 +133,11 @@ typedef BOOL (^BugsnagOnBreadcrumbBlock)(BugsnagBreadcrumb *_Nonnull breadcrumb)
  */
 typedef BOOL (^BugsnagOnSessionBlock)(BugsnagSession *_Nonnull session);
 
+/**
+ * An opaque object that identifies and allows the removal of a BugsnagOnSessionBlock.
+ */
+typedef id<NSObject> BugsnagOnSessionRef;
+
 // =============================================================================
 // MARK: - BugsnagConfiguration
 // =============================================================================
@@ -107,7 +145,8 @@ typedef BOOL (^BugsnagOnSessionBlock)(BugsnagSession *_Nonnull session);
 /**
  * Contains user-provided configuration, including API key and endpoints.
  */
-@interface BugsnagConfiguration : NSObject <BugsnagMetadataStore>
+BUGSNAG_EXTERN
+@interface BugsnagConfiguration : NSObject <BugsnagFeatureFlagStore, BugsnagMetadataStore>
 
 /**
  * Create a new configuration from the main bundle's infoDictionary, using keys nested under
@@ -195,7 +234,7 @@ typedef BOOL (^BugsnagOnSessionBlock)(BugsnagSession *_Nonnull session);
  * BSGThreadSendPolicyNever to disable or BSGThreadSendPolicyUnhandledOnly
  * to only do so for unhandled errors.
  */
-@property (nonatomic) BSGThreadSendPolicy sendThreads;
+@property (nonatomic) BSGThreadSendPolicy sendThreads API_UNAVAILABLE(watchos);
 
 /**
  *  Optional handler invoked when an error or crash occurs
@@ -217,12 +256,21 @@ typedef BOOL (^BugsnagOnSessionBlock)(BugsnagSession *_Nonnull session);
  * By default this is `BugsnagAppHangThresholdFatalOnly`, and can be set to a minimum of 250
  * milliseconds.
  */
-@property (nonatomic) NSUInteger appHangThresholdMillis;
+@property (nonatomic) NSUInteger appHangThresholdMillis API_UNAVAILABLE(watchos);
+
+/**
+ * Whether Bugsnag should report app hangs that occur while the app is in the background.
+ *
+ * By default this is false.
+ */
+@property (nonatomic) BOOL reportBackgroundAppHangs API_UNAVAILABLE(watchos);
 
 /**
  * Determines whether app sessions should be tracked automatically. By default this value is true.
  * If this value is updated after +[Bugsnag start] is called, only subsequent automatic sessions
  * will be captured.
+ *
+ * Note: automatic session tracking is not available in App Extensions.
  */
 @property (nonatomic) BOOL autoTrackSessions;
 
@@ -249,6 +297,30 @@ typedef BOOL (^BugsnagOnSessionBlock)(BugsnagSession *_Nonnull session);
  * By default this value is true.
  */
 @property (nonatomic) BOOL sendLaunchCrashesSynchronously;
+
+/**
+ * Whether Bugsnag should try to send crashing errors prior to app termination.
+ *
+ * Delivery will only be attempted for uncaught Objective-C exceptions and Mach
+ * exceptions, and while in progress will block the crashing thread for up to 3
+ * seconds.
+ *
+ * Delivery will be unreliable due to the necessary short timeout and potential
+ * memory corruption that caused the crashing error in the first place.
+ *
+ * If it fails prior to termination, delivery will be reattempted at next launch
+ * (the default behavior). 
+ *
+ * Use of this feature is discouraged because it:
+ * - may cause the app to hang while delivery occurs and impact the hang rate
+ *   reported in Xcode Organizer
+ * - will result in duplicate crashes in your dashboard for crashes that were
+ *   fully sent but without receiving an HTTP response within the timeout
+ * - may prevent other crash reporters from detecting the crash.
+ *
+ * By default this value is false.
+ */
+@property (nonatomic) BOOL attemptDeliveryOnCrash;
 
 /**
  * The types of breadcrumbs which will be captured. By default, this is all types.
@@ -282,9 +354,18 @@ typedef BOOL (^BugsnagOnSessionBlock)(BugsnagSession *_Nonnull session);
  * Sets the maximum number of breadcrumbs which will be stored. Once the threshold is reached,
  * the oldest breadcrumbs will be deleted.
  *
- * By default, 25 breadcrumbs are stored: this can be amended up to a maximum of 100.
+ * By default, 100 breadcrumbs are stored: this can be amended up to a maximum of 500.
  */
 @property (nonatomic) NSUInteger maxBreadcrumbs;
+
+/**
+ * The maximum length of breadcrumb messages and metadata string values.
+ * 
+ * Values longer than this will be truncated prior to sending, after running any OnSendError blocks.
+ *
+ * The default value is 10000.
+ */
+@property (nonatomic) NSUInteger maxStringValueLength;
 
 /**
  * Whether User information should be persisted to disk between application runs.
@@ -297,18 +378,18 @@ typedef BOOL (^BugsnagOnSessionBlock)(BugsnagSession *_Nonnull session);
  Exclusive write access is ensured by taking a `flock` of a known file in this subdirectory.
  The typical use case is to generate a fresh UUID when starting BugSnug. This is useful when multiple instances
  of the same binary might be running simultaneously, such as a command line tool.
+
+ - Note: Added by Sketch.
  */
 @property (nonatomic, nullable, copy) NSString *exclusiveSubdirectory;
 
 /**
  If `YES`, no network calls will be made. Use this if you want to suppress automatic upload of events.
  Presumably, events will then be uploaded in a later invocation of the process.
+
+ - Note: Added by Sketch.
  */
 @property (nonatomic) BOOL suppressNetworkOperations;
-
-// -----------------------------------------------------------------------------
-// MARK: - Methods
-// -----------------------------------------------------------------------------
 
 /**
  * A class defining the types of error that are reported. By default,
@@ -342,6 +423,8 @@ typedef BOOL (^BugsnagOnSessionBlock)(BugsnagSession *_Nonnull session);
  *  @param userId ID of the user
  *  @param name   Name of the user
  *  @param email  Email address of the user
+ *
+ *  If user ID is nil, a Bugsnag-generated Device ID is used for the `user.id` property of events and sessions.
  */
 - (void)setUser:(NSString *_Nullable)userId
       withEmail:(NSString *_Nullable)email
@@ -355,16 +438,25 @@ typedef BOOL (^BugsnagOnSessionBlock)(BugsnagSession *_Nonnull session);
  *  Add a callback to be invoked before a session is sent to Bugsnag.
  *
  *  @param block A block which can modify the session
+ *
+ *  @returns An opaque reference to the callback which can be passed to `removeOnSession:`
  */
-- (void)addOnSessionBlock:(BugsnagOnSessionBlock _Nonnull)block
+- (BugsnagOnSessionRef)addOnSessionBlock:(BugsnagOnSessionBlock)block
     NS_SWIFT_NAME(addOnSession(block:));
 
 /**
  * Remove a callback that would be invoked before a session is sent to Bugsnag.
  *
- * @param block The block to be removed.
+ * @param callback The opaque reference of the callback, returned by `addOnSessionBlock:`
  */
-- (void)removeOnSessionBlock:(BugsnagOnSessionBlock _Nonnull)block
+- (void)removeOnSession:(BugsnagOnSessionRef)callback
+    NS_SWIFT_NAME(removeOnSession(_:));
+
+/**
+ * Deprecated
+ */
+- (void)removeOnSessionBlock:(BugsnagOnSessionBlock)block
+    BUGSNAG_DEPRECATED_WITH_REPLACEMENT("removeOnSession:")
     NS_SWIFT_NAME(removeOnSession(block:));
 
 // =============================================================================
@@ -376,16 +468,25 @@ typedef BOOL (^BugsnagOnSessionBlock)(BugsnagSession *_Nonnull session);
  *  change the report contents as needed
  *
  *  @param block A block which returns YES if the report should be sent
+ *
+ *  @returns An opaque reference to the callback which can be passed to `removeOnSendError:`
  */
-- (void)addOnSendErrorBlock:(BugsnagOnSendErrorBlock _Nonnull)block
+- (BugsnagOnSendErrorRef)addOnSendErrorBlock:(BugsnagOnSendErrorBlock)block
     NS_SWIFT_NAME(addOnSendError(block:));
 
 /**
  * Remove the callback that would be invoked before an event is sent.
  *
- * @param block The block to be removed.
+ * @param callback The opaque reference of the callback, returned by `addOnSendErrorBlock:`
  */
-- (void)removeOnSendErrorBlock:(BugsnagOnSendErrorBlock _Nonnull)block
+- (void)removeOnSendError:(BugsnagOnSendErrorRef)callback
+    NS_SWIFT_NAME(removeOnSendError(_:));
+
+/**
+ * Deprecated
+ */
+- (void)removeOnSendErrorBlock:(BugsnagOnSendErrorBlock)block
+    BUGSNAG_DEPRECATED_WITH_REPLACEMENT("removeOnSendError:")
     NS_SWIFT_NAME(removeOnSendError(block:));
 
 // =============================================================================
@@ -397,18 +498,45 @@ typedef BOOL (^BugsnagOnSessionBlock)(BugsnagSession *_Nonnull session);
  *  change the breadcrumb contents as needed
  *
  *  @param block A block which returns YES if the breadcrumb should be captured
+ *
+ *  @returns An opaque reference to the callback which can be passed to `removeOnBreadcrumb:`
  */
-- (void)addOnBreadcrumbBlock:(BugsnagOnBreadcrumbBlock _Nonnull)block
+- (BugsnagOnBreadcrumbRef)addOnBreadcrumbBlock:(BugsnagOnBreadcrumbBlock)block
     NS_SWIFT_NAME(addOnBreadcrumb(block:));
 
 /**
  * Remove the callback that would be invoked when a breadcrumb is captured.
  *
- * @param block The block to be removed.
+ * @param callback The opaque reference of the callback, returned by `addOnBreadcrumbBlock:`
  */
-- (void)removeOnBreadcrumbBlock:(BugsnagOnBreadcrumbBlock _Nonnull)block
+- (void)removeOnBreadcrumb:(BugsnagOnBreadcrumbRef)callback
+    NS_SWIFT_NAME(removeOnBreadcrumb(_:));
+
+/**
+ * Deprecated
+ */
+- (void)removeOnBreadcrumbBlock:(BugsnagOnBreadcrumbBlock)block
+    BUGSNAG_DEPRECATED_WITH_REPLACEMENT("removeOnBreadcrumb:")
     NS_SWIFT_NAME(removeOnBreadcrumb(block:));
 
+// =============================================================================
+// MARK: - Telemetry
+// =============================================================================
+
+/**
+ * The types of telemetry that may be sent to Bugsnag for product improvement purposes.
+ *
+ * By default all types of telemetry are enabled.
+ */
+@property (nonatomic) BSGTelemetryOptions telemetry;
+
+// =============================================================================
+// MARK: - Plugins
+// =============================================================================
+
+/**
+ * Internal interface for adding custom behavior :nodoc:
+ */
 - (void)addPlugin:(id<BugsnagPlugin> _Nonnull)plugin;
 
 @end

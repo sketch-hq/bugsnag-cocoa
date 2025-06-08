@@ -28,6 +28,11 @@ Podfile.lock
 .swiftpm
 Package.resolved
 /compile_commands.json
+/coverage
 /docs/
 /infer-out
 /oclint.json
+bb.ready
+/maze_output
+Gemfile.lock
+Bugsnag.xcframework.zip

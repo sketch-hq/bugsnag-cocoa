@@ -8,9 +8,10 @@
 
 #import "BugsnagError+Private.h"
 
+#import "BSGKeys.h"
+#import "BSG_KSCrashDoctor.h"
 #import "BSG_KSCrashReportFields.h"
 #import "BugsnagCollections.h"
-#import "BugsnagKeys.h"
 #import "BugsnagLogger.h"
 #import "BugsnagStackframe+Private.h"
 #import "BugsnagStacktrace.h"
@@ -22,6 +23,7 @@ typedef NSString * BSGErrorTypeString NS_TYPED_ENUM;
 static BSGErrorTypeString const BSGErrorTypeStringCocoa = @"cocoa";
 static BSGErrorTypeString const BSGErrorTypeStringC = @"c";
 static BSGErrorTypeString const BSGErrorTypeStringReactNativeJs = @"reactnativejs";
+static BSGErrorTypeString const BSGErrorTypeStringCSharp = @"csharp";
 
 
 NSString *_Nonnull BSGSerializeErrorType(BSGErrorType errorType) {
@@ -32,6 +34,8 @@ NSString *_Nonnull BSGSerializeErrorType(BSGErrorType errorType) {
             return BSGErrorTypeStringC;
         case BSGErrorTypeReactNativeJs:
             return BSGErrorTypeStringReactNativeJs;
+        case BSGErrorTypeCSharp:
+            return BSGErrorTypeStringCSharp;
     }
 }
 
@@ -42,6 +46,8 @@ BSGErrorType BSGParseErrorType(NSString *errorType) {
         return BSGErrorTypeC;
     } else if ([BSGErrorTypeStringReactNativeJs isEqualToString:errorType]) {
         return BSGErrorTypeReactNativeJs;
+    } else if ([BSGErrorTypeStringCSharp isEqualToString:errorType]) {
+        return BSGErrorTypeCSharp;
     } else {
         return BSGErrorTypeCocoa;
     }
@@ -70,15 +76,15 @@ NSString *_Nonnull BSGParseErrorClass(NSDictionary *error, NSString *errorType) 
 }
 
 NSString *BSGParseErrorMessage(NSDictionary *report, NSDictionary *error, NSString *errorType) {
-    if ([errorType isEqualToString:BSGKeyMach] || error[BSGKeyReason] == nil) {
-        NSString *diagnosis = [report valueForKeyPath:@"crash.diagnosis"];
-        if (diagnosis && ![diagnosis hasPrefix:@"No diagnosis"]) {
-            return [[diagnosis componentsSeparatedByString:@"\n"] firstObject];
-        }
+    NSString *reason = error[@ BSG_KSCrashField_Reason];
+    NSString *diagnosis = nil;
+    if ([errorType isEqualToString:@ BSG_KSCrashExcType_Mach] || !reason) {
+        diagnosis = [[BSG_KSCrashDoctor new] diagnoseCrash:report];
     }
-    return error[BSGKeyReason] ?: @"";
+    return diagnosis ?: reason ?: @"";
 }
 
+BSG_OBJC_DIRECT_MEMBERS
 @implementation BugsnagError
 
 @dynamic type;
@@ -106,7 +112,7 @@ NSString *BSGParseErrorMessage(NSDictionary *report, NSDictionary *error, NSStri
         _errorClass = errorClass;
         _errorMessage = errorMessage;
         _typeString = BSGSerializeErrorType(errorType);
-        _stacktrace = stacktrace;
+        _stacktrace = stacktrace ?: @[];
     }
     return self;
 }
@@ -132,11 +138,24 @@ NSString *BSGParseErrorMessage(NSDictionary *report, NSDictionary *error, NSStri
 
 - (void)updateWithCrashInfoMessage:(NSString *)crashInfoMessage {
     NSArray<NSString *> *patterns = @[
-        // From Swift 2.2: https://github.com/apple/swift/blob/swift-2.2-RELEASE/stdlib/public/stubs/Assert.cpp#L24-L39
+        // From Swift 2.2:
+        //
+        // https://github.com/apple/swift/blob/swift-2.2-RELEASE/stdlib/public/stubs/Assert.cpp#L24-L39
         @"^(assertion failed|fatal error|precondition failed): ((.+): )?file .+, line \\d+\n$",
+        // https://github.com/apple/swift/blob/swift-2.2-RELEASE/stdlib/public/stubs/Assert.cpp#L41-L55
+        @"^(assertion failed|fatal error|precondition failed): ((.+))?\n$",
+        
         // From Swift 4.1: https://github.com/apple/swift/commit/d03a575279cf5c523779ef68f8d7903f09ba901e
+        //
+        // https://github.com/apple/swift/blob/swift-4.1-RELEASE/stdlib/public/stubs/Assert.cpp#L75-L95
         @"^(Assertion failed|Fatal error|Precondition failed): ((.+): )?file .+, line \\d+\n$",
+        // https://github.com/apple/swift/blob/swift-4.1-RELEASE/stdlib/public/stubs/Assert.cpp#L97-L112
+        // https://github.com/apple/swift/blob/swift-5.4-RELEASE/stdlib/public/stubs/Assert.cpp#L65-L80
+        @"^(Assertion failed|Fatal error|Precondition failed): ((.+))?\n$",
+        
         // From Swift 5.4: https://github.com/apple/swift/commit/1a051719e3b1b7c37a856684dd037d482fef8e59
+        //
+        // https://github.com/apple/swift/blob/swift-5.4-RELEASE/stdlib/public/stubs/Assert.cpp#L43-L63
         @"^.+:\\d+: (Assertion failed|Fatal error|Precondition failed)(: (.+))?\n$",
     ];
     

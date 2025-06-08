@@ -6,14 +6,19 @@
 //  Copyright © 2020 Bugsnag. All rights reserved.
 //
 
-#import "OnSendCallbackRemovalScenario.h"
+#import "Scenario.h"
+#import "Logging.h"
 
 /**
  * Verifies that removing an OnSend callback does not affect other OnSend callbacks
  */
+@interface OnSendCallbackRemovalScenario : Scenario
+@end
+
 @implementation OnSendCallbackRemovalScenario
 
-- (void)startBugsnag {
+- (void)configure {
+    [super configure];
     id block = ^BOOL(BugsnagEvent * _Nonnull event) {
         [event addMetadata:@"this should never happen" withKey:@"config" toSection:@"callbacks"];
         return true;
@@ -25,8 +30,7 @@
         [event addMetadata:@"adding metadata" withKey:@"config2" toSection:@"callbacks"];
         return true;
     }];
-    [self.config removeOnSendErrorBlock:block];
-    [super startBugsnag];
+    [self.config removeOnSendError:block];
 }
 
 - (void)run {

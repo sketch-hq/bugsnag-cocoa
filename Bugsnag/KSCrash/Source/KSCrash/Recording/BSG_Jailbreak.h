@@ -36,13 +36,14 @@
 #ifndef bsg_jailbreak_h
 #define bsg_jailbreak_h
 
+#include <dirent.h>
 #include <fcntl.h>
 #include <stdbool.h>
 #include <stdio.h>
-#include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
 #include <TargetConditionals.h>
+#include "BSGDefines.h"
 
 // The global environ variable must be imported this way.
 // See: https://opensource.apple.com/source/Libc/Libc-1439.40.11/man/FreeBSD/environ.7
@@ -75,7 +76,7 @@ static inline bool bsg_local_is_insert_libraries_env_var(const char* str) {
 // - Use pointers for output parameters, with labels that identify them as such.
 // - Beware of global consts or defines bleeding through.
 
-#if TARGET_CPU_ARM64
+#if TARGET_CPU_ARM64 && !TARGET_OS_OSX
 #define BSG_HAS_CUSTOM_SYSCALL 1
 
 // ARM64 3-parameter syscall
@@ -104,7 +105,7 @@ static inline bool bsg_local_is_insert_libraries_env_var(const char* str) {
     } \
 } while(0)
 
-#elif TARGET_CPU_X86_64 && __GCC_ASM_FLAG_OUTPUTS__
+#elif TARGET_CPU_X86_64 && defined(__GCC_ASM_FLAG_OUTPUTS__) && !TARGET_OS_OSX
 #define BSG_HAS_CUSTOM_SYSCALL 1
 
 // X86_64 3-parameter syscall
@@ -162,7 +163,7 @@ static inline bool bsg_local_is_insert_libraries_env_var(const char* str) {
  * Stores nonzero in *(pIsJailbroken) if the device is jailbroken, 0 otherwise.
  * Note: Implemented as a macro to force it inline always.
  */
-#if !TARGET_OS_SIMULATOR && !TARGET_OS_OSX
+#if !TARGET_OS_SIMULATOR && !TARGET_OS_OSX && BSG_HAVE_SYSCALL
 #define get_jailbreak_status(pIsJailbroken) do { \
     int fd = 0; \
  \
@@ -194,9 +195,10 @@ static inline bool bsg_local_is_insert_libraries_env_var(const char* str) {
     } \
  \
     const char* etc_apt_path = "/etc/apt"; \
-    struct stat st; \
-    if(stat(etc_apt_path, &st) == 0) { \
+    DIR *dirp = opendir(etc_apt_path); \
+    if(dirp) { \
         etc_apt_exists = true; \
+        closedir(dirp); \
     } \
  \
     for(int i = 0; environ[i] != NULL; i++) { \

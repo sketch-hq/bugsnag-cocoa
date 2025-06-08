@@ -1,13 +1,17 @@
 
-#import "OOMWillTerminateScenario.h"
+#import "Scenario.h"
+#import "Logging.h"
 
 #import <signal.h>
 
+@interface OOMWillTerminateScenario : Scenario
+@end
+
 @implementation OOMWillTerminateScenario
 
-- (void)startBugsnag {
+- (void)configure {
+    [super configure];
     self.config.autoTrackSessions = NO;
-    [super startBugsnag];
 }
 
 - (void)run {

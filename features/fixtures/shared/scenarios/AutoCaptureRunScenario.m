@@ -6,13 +6,17 @@
 //  Copyright © 2020 Bugsnag. All rights reserved.
 //
 
-#import "AutoCaptureRunScenario.h"
+#import "Scenario.h"
+#import "Logging.h"
+
+@interface AutoCaptureRunScenario : Scenario
+@end
 
 @implementation AutoCaptureRunScenario
 
-- (void)startBugsnag {
+- (void)configure {
+    [super configure];
     self.config.autoTrackSessions = YES;
-    [super startBugsnag];
 }
 
 - (void)run {}

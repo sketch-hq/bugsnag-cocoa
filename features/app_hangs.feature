@@ -1,3 +1,5 @@
+@app_hang_test
+
 Feature: App hangs
 
   Background:
@@ -30,6 +32,10 @@ Feature: App hangs
 
     And the event "context" equals "App Hang Scenario"
 
+    And the event contains the following feature flags:
+      | featureFlag | variant |
+      | Testing     |         |
+
     #
     # Checks copied from app_and_device_attributes.feature
     #
@@ -42,7 +48,7 @@ Feature: App hangs
     And the error payload field "events.0.device.manufacturer" equals "Apple"
     And the error payload field "events.0.device.locale" is not null
     And the error payload field "events.0.device.id" is not null
-    And the error payload field "events.0.device.model" matches the test device model
+    And the error payload field "events.0.device.model" matches the regex "[iPad|Macmini|iPhone]1?\d,\d"
     And the error payload field "events.0.device.modelNumber" equals the platform-dependent string:
       | ios   | @not_null |
       | macos | @null     |
@@ -52,11 +58,9 @@ Feature: App hangs
 
     # DeviceWithState
 
-    And the error payload field "events.0.device.freeDisk" is an integer
+    And on macOS, the error payload field "events.0.device.freeDisk" is an integer
     And the error payload field "events.0.device.freeMemory" is an integer
-    And the error payload field "events.0.device.orientation" equals the platform-dependent string:
-      | ios   | @not_null |
-      | macos | @null     |
+    And on iOS, the event "device.orientation" matches "(face(down|up)|landscape(left|right)|portrait(upsidedown)?)"
     And the error payload field "events.0.device.time" is a date
 
     # App
@@ -65,10 +69,10 @@ Feature: App hangs
     And the error payload field "events.0.app.bundleVersion" is not null
     #And the error payload field "events.0.app.dsymUUIDs" is a non-empty array # Fails, == nil
     And the error payload field "events.0.app.id" equals the platform-dependent string:
-      | ios   | com.bugsnag.iOSTestApp   |
-      | macos | com.bugsnag.macOSTestApp |
+      | ios   | com.bugsnag.fixtures.cocoa   |
+      | macos | com.bugsnag.fixtures.macOSTestApp |
     And the error payload field "events.0.app.isLaunching" is true
-    And the error payload field "events.0.app.releaseStage" equals "development"
+    And the error payload field "events.0.app.releaseStage" equals "production"
     And the error payload field "events.0.app.type" equals the platform-dependent string:
       | ios   | iOS   |
       | macos | macOS |
@@ -84,6 +88,10 @@ Feature: App hangs
 
     And the error payload field "events.0.breadcrumbs" is an array with 1 elements
     And the error payload field "events.0.breadcrumbs.0.name" equals "This breadcrumb was left during the hang, before detection"
+
+    And on iOS 13 and later, the event "metaData.app.freeMemory" is a number
+    And on iOS 13 and later, the event "metaData.app.memoryLimit" is a number
+    And the event "metaData.app.memoryUsage" is a number
 
     # Stack trace
 
@@ -101,21 +109,28 @@ Feature: App hangs
 
   Scenario: Fatal app hangs should be reported if appHangThresholdMillis = BugsnagAppHangThresholdFatalOnly
     When I run "AppHangFatalOnlyScenario"
-    And I wait for 3 seconds
-    And I relaunch the app
+    And I wait for 10 seconds
+    And I kill and relaunch the app
     And I set the HTTP status code to 500
     And I configure Bugsnag for "AppHangFatalOnlyScenario"
     And I wait to receive an error
     And I clear the error queue
-    And I relaunch the app
+    # Wait for fixture to receive the response and save the payload
+    And I wait for 2 seconds
+    And I kill and relaunch the app
     And I set the HTTP status code to 200
     And I configure Bugsnag for "AppHangFatalOnlyScenario"
     And I wait to receive an error
-
     And the event "severity" equals "error"
     And the event "severityReason.type" equals "appHang"
     And the event "threads.0.errorReportingThread" is true
     And the event "unhandled" is true
+    And the event contains the following feature flags:
+      | featureFlag | variant |
+      | Testing     |         |
+    And on iOS 13 and later, the event "metaData.app.freeMemory" is a number
+    And on iOS 13 and later, the event "metaData.app.memoryLimit" is a number
+    And the event "metaData.app.memoryUsage" is a number
 
     And the exception "errorClass" equals "App Hang"
     And the exception "message" equals "The app was terminated while unresponsive"
@@ -126,16 +141,17 @@ Feature: App hangs
 
   Scenario: Fatal app hangs should not be reported if enabledErrorTypes.appHangs = false
     When I run "AppHangFatalDisabledScenario"
-    And I wait for 3 seconds
-    And I relaunch the app
+    And I wait for 10 seconds
+    And I kill and relaunch the app
     And I configure Bugsnag for "AppHangFatalDisabledScenario"
     Then I should receive no errors
 
   @skip_macos
   Scenario: Fatal app hangs should be reported if the app hangs before going to the background
     When I run "AppHangFatalOnlyScenario"
-    And I background the app for 3 seconds
-    And I relaunch the app
+    And I wait for 10 seconds
+    And I switch to the web browser
+    And I kill and relaunch the app
     And I configure Bugsnag for "AppHangFatalOnlyScenario"
     And I wait to receive an error
     And the exception "message" equals "The app was terminated while unresponsive"
@@ -143,22 +159,20 @@ Feature: App hangs
   @skip_macos
   Scenario: Fatal app hangs should not be reported if they occur once the app is in the background
     When I run "AppHangDidEnterBackgroundScenario"
-    And I background the app for 3 seconds
-    And I relaunch the app
+    And I switch to the web browser for 10 seconds
+    And I kill and relaunch the app
     And I configure Bugsnag for "AppHangDidEnterBackgroundScenario"
     Then I should receive no errors
 
   @skip_macos
   Scenario: App hangs should be reported if the app hangs after resuming from the background
     When I run "AppHangDidBecomeActiveScenario"
-    And I background the app for 3 seconds
+    And I switch to the web browser for 3 seconds
     And I wait to receive an error
     And the exception "message" equals "The app's main thread failed to respond to an event within 2000 milliseconds"
 
   Scenario: App hangs that occur during app termination should be non-fatal
-    Given I run "AppHangInTerminationScenario"
-    And the app is not running
-    And I relaunch the app
+    Given I run "AppHangInTerminationScenario" and relaunch the crashed app
     And I configure Bugsnag for "AppHangInTerminationScenario"
     Then I wait to receive an error
     And the event "severity" equals "warning"
@@ -167,3 +181,14 @@ Feature: App hangs
     And the exception "errorClass" equals "App Hang"
     And the exception "message" equals "The app's main thread failed to respond to an event within 2000 milliseconds"
     And the exception "type" equals "cocoa"
+
+  @skip_macos
+  Scenario: Background app hangs should be reported if reportBackgroundAppHangs = true
+    When I run "ReportBackgroundAppHangScenario"
+    And I switch to the web browser
+    And I wait to receive an error
+    Then the exception "errorClass" equals "App Hang"
+    And the exception "message" equals "The app's main thread failed to respond to an event within 1000 milliseconds"
+    And the event "app.inForeground" is false
+    And the event "usage.config.appHangThresholdMillis" equals 1000
+    And the event "usage.config.reportBackgroundAppHangs" is true

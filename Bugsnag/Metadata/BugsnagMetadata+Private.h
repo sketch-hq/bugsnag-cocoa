@@ -6,29 +6,20 @@
 //  Copyright © 2020 Bugsnag Inc. All rights reserved.
 //
 
-#import "BugsnagMetadata.h"
+#import "BugsnagInternals.h"
 
-@class BugsnagStateEvent;
+#import "BSGDefines.h"
 
 NS_ASSUME_NONNULL_BEGIN
 
-typedef void (^BugsnagObserverBlock)(BugsnagStateEvent *event);
+typedef void (^ BSGMetadataObserver)(BugsnagMetadata *);
 
-@interface BugsnagMetadata ()
+BSG_OBJC_DIRECT_MEMBERS
+@interface BugsnagMetadata () <NSCopying>
 
 #pragma mark Properties
 
-@property (readonly, nonatomic) NSMutableDictionary *dictionary;
-
-#pragma mark Methods
-
-- (NSDictionary *)toDictionary;
-
-- (instancetype)deepCopy;
-
-- (void)addObserverWithBlock:(BugsnagObserverBlock)block;
-
-- (void)removeObserverWithBlock:(BugsnagObserverBlock)block;
+@property (nullable, nonatomic) BSGMetadataObserver observer;
 
 @end
 

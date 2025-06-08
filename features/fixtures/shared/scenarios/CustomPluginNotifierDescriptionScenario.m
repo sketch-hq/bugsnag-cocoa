@@ -1,12 +1,8 @@
-#import "CustomPluginNotifierDescriptionScenario.h"
-#import <Bugsnag/Bugsnag.h>
+#import "Scenario.h"
+#import "Logging.h"
+#import "Bridge_InternalAPI.h"
 
-@interface Bugsnag ()
-+ (BugsnagClient *)client;
-@end
-
-@interface BugsnagClient ()
-@property id notifier;
+@interface CustomPluginNotifierDescriptionScenario : Scenario
 @end
 
 @interface DescriptionPlugin : NSObject<BugsnagPlugin>
@@ -32,10 +28,10 @@
 
 @implementation CustomPluginNotifierDescriptionScenario
 
-- (void)startBugsnag {
+- (void)configure {
+    [super configure];
     self.config.autoTrackSessions = NO;
     [self.config addPlugin:[DescriptionPlugin new]];
-    [super startBugsnag];
 }
 
 - (void)run {

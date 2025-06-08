@@ -6,8 +6,8 @@
 //  Copyright © 2020 Bugsnag Inc. All rights reserved.
 //
 
-#import "BugsnagAppWithState.h"
 #import "BugsnagApp+Private.h"
+#import "BugsnagInternals.h"
 
 @class BugsnagConfiguration;
 
@@ -15,11 +15,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface BugsnagAppWithState ()
 
-+ (BugsnagAppWithState *)appFromJson:(NSDictionary *)json;
-
 + (BugsnagAppWithState *)appWithDictionary:(NSDictionary *)event config:(BugsnagConfiguration *)config codeBundleId:(nullable NSString *)codeBundleId;
-
-- (NSDictionary *)toDict;
 
 @end
 

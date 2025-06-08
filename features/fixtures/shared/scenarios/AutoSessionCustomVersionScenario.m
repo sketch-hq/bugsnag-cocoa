@@ -6,18 +6,20 @@
 //  Copyright © 2018 Bugsnag. All rights reserved.
 //
 
-#import "AutoSessionCustomVersionScenario.h"
+#import "Scenario.h"
+#import "Logging.h"
 
-#import <Bugsnag/Bugsnag.h>
+@interface AutoSessionCustomVersionScenario : Scenario
+@end
 
 @implementation AutoSessionCustomVersionScenario
 
-- (void)startBugsnag {
+- (void)configure {
+    [super configure];
     [self.config addOnSessionBlock:^BOOL(BugsnagSession * _Nonnull session) {
         session.app.version = @"2.0.14";
         return true;
     }];
-    [super startBugsnag];
 }
 
 - (void)run {

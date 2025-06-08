@@ -24,17 +24,22 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#import "PrivilegedInstructionScenario.h"
-#include "spin_malloc.h"
+#import "Scenario.h"
+#import "Logging.h"
+
+#import "spin_malloc.h"
 
 /**
  * Attempt to execute an instruction that can only be executed in supervisor mode.
  */
+@interface PrivilegedInstructionScenario : Scenario
+@end
+
 @implementation PrivilegedInstructionScenario
 
-- (void)startBugsnag {
+- (void)configure {
+    [super configure];
     self.config.autoTrackSessions = NO;
-    [super startBugsnag];
 }
 
 - (void)run {

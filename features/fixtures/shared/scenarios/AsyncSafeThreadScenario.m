@@ -24,18 +24,22 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#import "AsyncSafeThreadScenario.h"
+#import "Scenario.h"
+#import "Logging.h"
 #import <pthread.h>
 
 /**
  * Triggers a crash with libsystem_pthread's _pthread_list_lock held,
  * causing non-async-safe crash reporters that use pthread APIs to deadlock.
  */
+@interface AsyncSafeThreadScenario : Scenario
+@end
+
 @implementation AsyncSafeThreadScenario
 
-- (void)startBugsnag {
+- (void)configure {
+    [super configure];
     self.config.autoTrackSessions = NO;
-    [super startBugsnag];
 }
 
 - (void)run {
@@ -43,7 +47,7 @@
 
     /* This is unreachable, but prevents clang from applying TCO to the above when
      * optimization is enabled. */
-    NSLog(@"I'm here from the tail call prevention department.");
+    logInfo(@"I'm here from the tail call prevention department.");
 }
 
 @end

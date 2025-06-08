@@ -1,5 +1,5 @@
 //
-//  BSGBreadcrumbsProducer.h
+//  BSGNotificationBreadcrumbs.h
 //  Bugsnag
 //
 //  Created by Nick Dowell on 10/12/2020.
@@ -8,21 +8,15 @@
 
 #import <Bugsnag/BugsnagBreadcrumb.h>
 
+#import "BSGDefines.h"
+
 @class BugsnagConfiguration;
 
 NS_ASSUME_NONNULL_BEGIN
 
-@protocol BSGBreadcrumbSink <NSObject>
+static NSString * const BSGNotificationBreadcrumbsMessageAppWillTerminate = @"App Will Terminate";
 
-- (void)leaveBreadcrumbWithMessage:(NSString *)message metadata:(nullable NSDictionary *)metadata andType:(BSGBreadcrumbType)type;
-
-@end
-
-
-#pragma mark -
-
-extern NSString * const BSGNotificationBreadcrumbsMessageAppWillTerminate;
-
+BSG_OBJC_DIRECT_MEMBERS
 @interface BSGNotificationBreadcrumbs : NSObject
 
 #pragma mark Initializers

@@ -24,17 +24,22 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#import "ReadOnlyPageScenario.h"
-#include "spin_malloc.h"
+#import "Scenario.h"
+#import "Logging.h"
+
+#import "spin_malloc.h"
 
 /**
  * Attempt to write to a page into which the app's code is mapped.
  */
+@interface ReadOnlyPageScenario : Scenario
+@end
+
 @implementation ReadOnlyPageScenario
 
-- (void)startBugsnag {
+- (void)configure {
+    [super configure];
     self.config.autoTrackSessions = NO;
-    [super startBugsnag];
 }
 
 static void __attribute__((used)) dummyfunc(void) {

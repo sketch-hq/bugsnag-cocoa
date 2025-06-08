@@ -26,21 +26,17 @@
 
 #import "Bugsnag.h"
 
-#import "BSG_KSCrash.h"
+#import "BSGStorageMigratorV0V1.h"
 #import "Bugsnag+Private.h"
 #import "BugsnagBreadcrumbs.h"
-#import "BugsnagLogger.h"
 #import "BugsnagClient+Private.h"
-#import "BugsnagConfiguration+Private.h"
-#import "BugsnagKeys.h"
-#import "BugsnagMetadata+Private.h"
-#import "BugsnagPlugin.h"
-#import "BugsnagHandledState.h"
-#import "BugsnagSystemState.h"
-#import "BSGStorageMigratorV0V1.h"
+#import "BugsnagInternals.h"
+#import "BugsnagLogger.h"
+#import "BSGUtils.h"
 
 static BugsnagClient *bsg_g_bugsnag_client = NULL;
 
+BSG_OBJC_DIRECT_MEMBERS
 @implementation Bugsnag
 
 + (BugsnagClient *_Nonnull)start {
@@ -49,14 +45,15 @@ static BugsnagClient *bsg_g_bugsnag_client = NULL;
 }
 
 + (BugsnagClient *_Nonnull)startWithApiKey:(NSString *_Nonnull)apiKey {
-    BugsnagConfiguration *configuration = [[BugsnagConfiguration alloc] initWithApiKey:apiKey];
+    BugsnagConfiguration *configuration = [BugsnagConfiguration loadConfig];
+    configuration.apiKey = apiKey;
     return [self startWithConfiguration:configuration];
 }
 
 + (BugsnagClient *_Nonnull)startWithConfiguration:(BugsnagConfiguration *_Nonnull)configuration {
     @synchronized(self) {
-        [BSGStorageMigratorV0V1 migrate];
         if (bsg_g_bugsnag_client == nil) {
+            [BSGStorageMigratorV0V1 migrate];
             bsg_g_bugsnag_client = [[BugsnagClient alloc] initWithConfiguration:configuration];
             [bsg_g_bugsnag_client start];
         } else {
@@ -64,6 +61,10 @@ static BugsnagClient *bsg_g_bugsnag_client = NULL;
         }
         return bsg_g_bugsnag_client;
     }
+}
+
++ (BOOL)isStarted {
+    return bsg_g_bugsnag_client.isStarted;
 }
 
 /**
@@ -74,79 +75,67 @@ static BugsnagClient *bsg_g_bugsnag_client = NULL;
     bsg_g_bugsnag_client = nil;
 }
 
-+ (BugsnagConfiguration *)configuration {
-    if ([self bugsnagStarted]) {
-        return self.client.configuration;
-    }
-    return nil;
-}
-
-+ (BugsnagConfiguration *)instance {
-    return [self configuration];
-}
-
 + (BugsnagClient *)client {
     return bsg_g_bugsnag_client;
 }
 
 + (BOOL)appDidCrashLastLaunch {
-    if ([self bugsnagStarted]) {
+    if ([self bugsnagReadyForInternalCalls]) {
         return [self.client appDidCrashLastLaunch];
     }
     return NO;
 }
 
 + (BugsnagLastRunInfo *)lastRunInfo {
-    if ([self bugsnagStarted]) {
+    if ([self bugsnagReadyForInternalCalls]) {
         return self.client.lastRunInfo;
     }
     return nil;
 }
 
 + (void)markLaunchCompleted {
-    if ([self bugsnagStarted]) {
+    if ([self bugsnagReadyForInternalCalls]) {
         [self.client markLaunchCompleted];
     }
 }
 
+// Here, we pass all public notify APIs to a common handling method
+// (notifyErrorOrException) and then prevent the compiler from performing
+// any inlining or outlining that would change the number of Bugsnag handler
+// methods on the stack and break our stack stripping.
+// Note: Each BSGPreventInlining call site within a module MUST pass a different
+//       string to prevent outlining!
+
 + (void)notify:(NSException *)exception {
-    if ([self bugsnagStarted]) {
-        [self.client notify:exception];
+    if ([self bugsnagReadyForInternalCalls]) {
+        BSGPreventInlining(@"Prevent");
+        [self.client notifyErrorOrException:exception stackStripDepth:2 block:nil];
     }
 }
 
 + (void)notify:(NSException *)exception block:(BugsnagOnErrorBlock)block {
-    if ([self bugsnagStarted]) {
-        [self.client notify:exception block:block];
+    if ([self bugsnagReadyForInternalCalls]) {
+        BSGPreventInlining(@"inlining");
+        [self.client notifyErrorOrException:exception stackStripDepth:2 block:block];
     }
 }
 
 + (void)notifyError:(NSError *)error {
-    if ([self bugsnagStarted]) {
-        [self.client notifyError:error];
+    if ([self bugsnagReadyForInternalCalls]) {
+        BSGPreventInlining(@"and");
+        [self.client notifyErrorOrException:error stackStripDepth:2 block:nil];
     }
 }
 
 + (void)notifyError:(NSError *)error block:(BugsnagOnErrorBlock)block {
-    if ([self bugsnagStarted]) {
-        [self.client notifyError:error block:block];
+    if ([self bugsnagReadyForInternalCalls]) {
+        BSGPreventInlining(@"outlining");
+        [self.client notifyErrorOrException:error stackStripDepth:2 block:block];
     }
 }
 
-/**
- * Intended for use by other clients (React Native/Unity). Calling this method
- * directly from iOS is not supported.
- */
-+ (void)notifyInternal:(BugsnagEvent *_Nonnull)event
-                 block:(BugsnagOnErrorBlock)block {
-    if ([self bugsnagStarted]) {
-        [self.client notifyInternal:event
-                              block:block];
-    }
-}
-
-+ (BOOL)bugsnagStarted {
-    if (!self.client.started) {
++ (BOOL)bugsnagReadyForInternalCalls {
+    if (!self.client.readyForInternalCalls) {
         bsg_log_err(@"Ensure you have started Bugsnag with startWithApiKey: "
                     @"before calling any other Bugsnag functions.");
 
@@ -156,21 +145,14 @@ static BugsnagClient *bsg_g_bugsnag_client = NULL;
 }
 
 + (void)leaveBreadcrumbWithMessage:(NSString *)message {
-    if ([self bugsnagStarted]) {
+    if ([self bugsnagReadyForInternalCalls]) {
         [self.client leaveBreadcrumbWithMessage:message];
-    }
-}
-
-+ (void)leaveBreadcrumbWithBlock:
-    (void (^_Nonnull)(BugsnagBreadcrumb *_Nonnull))block {
-    if ([self bugsnagStarted]) {
-        [self.client addBreadcrumbWithBlock:block];
     }
 }
 
 + (void)leaveBreadcrumbForNotificationName:
     (NSString *_Nonnull)notificationName {
-    if ([self bugsnagStarted]) {
+    if ([self bugsnagReadyForInternalCalls]) {
         [self.client leaveBreadcrumbForNotificationName:notificationName];
     }
 }
@@ -179,45 +161,79 @@ static BugsnagClient *bsg_g_bugsnag_client = NULL;
                           metadata:(NSDictionary *_Nullable)metadata
                            andType:(BSGBreadcrumbType)type
 {
-    if ([self bugsnagStarted]) {
+    if ([self bugsnagReadyForInternalCalls]) {
         [self.client leaveBreadcrumbWithMessage:message
                                        metadata:metadata
                                         andType:type];
     }
 }
 
++ (void)leaveNetworkRequestBreadcrumbForTask:(NSURLSessionTask *)task
+                                     metrics:(NSURLSessionTaskMetrics *)metrics {
+    if ([self bugsnagReadyForInternalCalls]) {
+        [self.client leaveNetworkRequestBreadcrumbForTask:task metrics:metrics];
+    }
+}
+
 + (NSArray<BugsnagBreadcrumb *> *_Nonnull)breadcrumbs {
-    if ([self bugsnagStarted]) {
-        return self.client.breadcrumbs.breadcrumbs ?: @[];
+    if ([self bugsnagReadyForInternalCalls]) {
+        return self.client.breadcrumbs;
     } else {
         return @[];
     }
 }
 
 + (void)startSession {
-    if ([self bugsnagStarted]) {
+    if ([self bugsnagReadyForInternalCalls]) {
         [self.client startSession];
     }
 }
 
 + (void)pauseSession {
-    if ([self bugsnagStarted]) {
+    if ([self bugsnagReadyForInternalCalls]) {
         [self.client pauseSession];
     }
 }
 
 + (BOOL)resumeSession {
-    if ([self bugsnagStarted]) {
+    if ([self bugsnagReadyForInternalCalls]) {
         return [self.client resumeSession];
     } else {
         return false;
     }
 }
 
-+ (void)addRuntimeVersionInfo:(NSString *)info
-                      withKey:(NSString *)key {
-    if ([self bugsnagStarted]) {
-        [self.client addRuntimeVersionInfo:info withKey:key];
+// =============================================================================
+// MARK: - <BugsnagFeatureFlagStore>
+// =============================================================================
+
++ (void)addFeatureFlagWithName:(NSString *)name variant:(nullable NSString *)variant {
+    if ([self bugsnagReadyForInternalCalls]) {
+        [self.client addFeatureFlagWithName:name variant:variant];
+    }
+}
+
++ (void)addFeatureFlagWithName:(NSString *)name {
+    if ([self bugsnagReadyForInternalCalls]) {
+        [self.client addFeatureFlagWithName:name];
+    }
+}
+
++ (void)addFeatureFlags:(NSArray<BugsnagFeatureFlag *> *)featureFlags {
+    if ([self bugsnagReadyForInternalCalls]) {
+        [self.client addFeatureFlags:featureFlags];
+    }
+}
+
++ (void)clearFeatureFlagWithName:(NSString *)name {
+    if ([self bugsnagReadyForInternalCalls]) {
+        [self.client clearFeatureFlagWithName:name];
+    }
+}
+
++ (void)clearFeatureFlags {
+    if ([self bugsnagReadyForInternalCalls]) {
+        [self.client clearFeatureFlags];
     }
 }
 
@@ -237,7 +253,7 @@ static BugsnagClient *bsg_g_bugsnag_client = NULL;
             withKey:(NSString *_Nonnull)key
           toSection:(NSString *_Nonnull)section
 {
-    if ([self bugsnagStarted]) {
+    if ([self bugsnagReadyForInternalCalls]) {
         [self.client addMetadata:metadata
                                   withKey:key
                                 toSection:section];
@@ -247,7 +263,7 @@ static BugsnagClient *bsg_g_bugsnag_client = NULL;
 + (void)addMetadata:(id _Nonnull)metadata
           toSection:(NSString *_Nonnull)section
 {
-    if ([self bugsnagStarted]) {
+    if ([self bugsnagReadyForInternalCalls]) {
         [self.client addMetadata:metadata
                        toSection:section];
     }
@@ -255,7 +271,7 @@ static BugsnagClient *bsg_g_bugsnag_client = NULL;
 
 + (NSMutableDictionary *)getMetadataFromSection:(NSString *)section
 {
-    if ([self bugsnagStarted]) {
+    if ([self bugsnagReadyForInternalCalls]) {
         return [[self.client getMetadataFromSection:section] mutableCopy];
     }
     return nil;
@@ -264,7 +280,7 @@ static BugsnagClient *bsg_g_bugsnag_client = NULL;
 + (id _Nullable )getMetadataFromSection:(NSString *_Nonnull)section
                                 withKey:(NSString *_Nonnull)key
 {
-    if ([self bugsnagStarted]) {
+    if ([self bugsnagReadyForInternalCalls]) {
         return [[self.client getMetadataFromSection:section withKey:key] mutableCopy];
     }
     return nil;
@@ -272,7 +288,7 @@ static BugsnagClient *bsg_g_bugsnag_client = NULL;
 
 + (void)clearMetadataFromSection:(NSString *)section
 {
-    if ([self bugsnagStarted]) {
+    if ([self bugsnagReadyForInternalCalls]) {
         [self.client clearMetadataFromSection:section];
     }
 }
@@ -280,7 +296,7 @@ static BugsnagClient *bsg_g_bugsnag_client = NULL;
 + (void)clearMetadataFromSection:(NSString *_Nonnull)sectionName
                          withKey:(NSString *_Nonnull)key
 {
-    if ([self bugsnagStarted]) {
+    if ([self bugsnagReadyForInternalCalls]) {
         [self.client clearMetadataFromSection:sectionName
                                       withKey:key];
     }
@@ -289,13 +305,13 @@ static BugsnagClient *bsg_g_bugsnag_client = NULL;
 // MARK: -
 
 + (void)setContext:(NSString *_Nullable)context {
-    if ([self bugsnagStarted]) {
+    if ([self bugsnagReadyForInternalCalls]) {
         [self.client setContext:context];
     }
 }
 
 + (NSString *_Nullable)context {
-    if ([self bugsnagStarted]) {
+    if ([self bugsnagReadyForInternalCalls]) {
         return self.client.context;
     }
     return nil;
@@ -308,31 +324,30 @@ static BugsnagClient *bsg_g_bugsnag_client = NULL;
 + (void)setUser:(NSString *_Nullable)userId
       withEmail:(NSString *_Nullable)email
         andName:(NSString *_Nullable)name {
-    if ([self bugsnagStarted]) {
+    if ([self bugsnagReadyForInternalCalls]) {
         [self.client setUser:userId withEmail:email andName:name];
     }
 }
 
-+ (void)addOnSessionBlock:(BugsnagOnSessionBlock _Nonnull)block
-{
-    if ([self bugsnagStarted]) {
-        [self.client addOnSessionBlock:block];
++ (nonnull BugsnagOnSessionRef)addOnSessionBlock:(nonnull BugsnagOnSessionBlock)block {
+    if ([self bugsnagReadyForInternalCalls]) {
+        return [self.client addOnSessionBlock:block];
+    } else {
+        // We need to return something from this nonnull method; simulate what would have happened.
+        return [block copy];
+    }
+}
+
++ (void)removeOnSession:(nonnull BugsnagOnSessionRef)callback {
+    if ([self bugsnagReadyForInternalCalls]) {
+        [self.client removeOnSession:callback];
     }
 }
 
 + (void)removeOnSessionBlock:(BugsnagOnSessionBlock _Nonnull )block
 {
-    if ([self bugsnagStarted]) {
+    if ([self bugsnagReadyForInternalCalls]) {
         [self.client removeOnSessionBlock:block];
-    }
-}
-
-/**
- * Intended for internal use only - sets the code bundle id for React Native
- */
-+ (void)updateCodeBundleId:(NSString *)codeBundleId {
-    if ([self bugsnagStarted]) {
-        self.client.codeBundleId = codeBundleId;
     }
 }
 
@@ -340,14 +355,23 @@ static BugsnagClient *bsg_g_bugsnag_client = NULL;
 // MARK: - OnBreadcrumb
 // =============================================================================
 
-+ (void)addOnBreadcrumbBlock:(BugsnagOnBreadcrumbBlock _Nonnull)block {
-    if ([self bugsnagStarted]) {
-        [self.client addOnBreadcrumbBlock:block];
++ (nonnull BugsnagOnBreadcrumbRef)addOnBreadcrumbBlock:(nonnull BugsnagOnBreadcrumbBlock)block {
+    if ([self bugsnagReadyForInternalCalls]) {
+        return [self.client addOnBreadcrumbBlock:block];
+    } else {
+        // We need to return something from this nonnull method; simulate what would have happened.
+        return [block copy];
+    }
+}
+
++ (void)removeOnBreadcrumb:(nonnull BugsnagOnBreadcrumbRef)callback {
+    if ([self bugsnagReadyForInternalCalls]) {
+        [self.client removeOnBreadcrumb:callback];
     }
 }
 
 + (void)removeOnBreadcrumbBlock:(BugsnagOnBreadcrumbBlock _Nonnull)block {
-    if ([self bugsnagStarted]) {
+    if ([self bugsnagReadyForInternalCalls]) {
         [self.client removeOnBreadcrumbBlock:block];
     }
 }

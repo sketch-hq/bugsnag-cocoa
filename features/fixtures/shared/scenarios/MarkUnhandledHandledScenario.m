@@ -7,12 +7,13 @@
 //
 
 #import "MarkUnhandledHandledScenario.h"
+#import "Logging.h"
 
 @implementation MarkUnhandledHandledScenario
 
-- (void)startBugsnag {
+- (void)configure {
+    [super configure];
     self.config.onCrashHandler = markErrorHandledCallback;
-    [super startBugsnag];
 }
 
 @end

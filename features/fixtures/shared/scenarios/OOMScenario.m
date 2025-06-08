@@ -6,7 +6,8 @@
 //  Copyright © 2021 Bugsnag. All rights reserved.
 //
 
-#import "OOMScenario.h"
+#import "Scenario.h"
+#import "Logging.h"
 
 #import <UIKit/UIKit.h>
 
@@ -18,16 +19,26 @@
 
 #define MEGABYTE 0x100000
 
+@interface OOMScenario : Scenario
+@end
+
 @implementation OOMScenario
 
-- (void)startBugsnag {
+void onCrashHandler(const BSG_KSCrashReportWriter *writer) {
+    assert(!"onCrashHandler should not be called for OOMs");
+}
+
+- (void)configure {
+    [super configure];
     self.config.autoTrackSessions = YES;
     self.config.enabledErrorTypes.ooms = YES;
+    self.config.onCrashHandler = onCrashHandler;
     self.config.launchDurationMillis = 0; // Ensure isLaunching will be true for the OOM, no matter how long it takes to occur.
     self.config.appType = @"vanilla";
     self.config.appVersion = @"3.2.1";
     self.config.bundleVersion = @"321.123";
     self.config.releaseStage = @"staging";
+    [self.config addFeatureFlagWithName: @"Testing"];
     [self.config addMetadata:@{@"bar": @"foo"} toSection:@"custom"];
     [self.config setUser:@"foobar" withEmail:@"foobar@example.com" andName:@"Foo Bar"];
     [self.config addMetadata:@{@"group": @"users"} toSection:@"user"];
@@ -41,14 +52,13 @@
         }
         return true;
     }];
-    [super startBugsnag];
 }
 
 - (void)run {
     [Bugsnag setContext:@"OOM Scenario"];
     [NSNotificationCenter.defaultCenter addObserverForName:UIApplicationDidReceiveMemoryWarningNotification object:nil
                                                      queue:nil usingBlock:^(NSNotification *note) {
-        NSLog(@"*** Received memory warning");
+        logDebug(@"*** Received memory warning");
     }];
     // Delay to allow session payload to be sent
     [self performSelector:@selector(consumeAllMemory) withObject:nil afterDelay:2];
@@ -57,11 +67,11 @@
 - (void)consumeAllMemory {
     struct utsname system = {0};
     uname(&system);
-    NSLog(@"*** Device = %s", system.machine);
+    logDebug(@"*** Device = %s", system.machine);
     
     NSUInteger physicalMemory = (NSUInteger)NSProcessInfo.processInfo.physicalMemory;
     NSUInteger megabytes = physicalMemory / MEGABYTE;
-    NSLog(@"*** Physical memory = %lu MB", (unsigned long)megabytes);
+    logDebug(@"*** Physical memory = %lu MB", (unsigned long)megabytes);
     
     //
     // The ActiveHard limit and point at which a memory warning is sent varies by device
@@ -95,21 +105,21 @@
     kern_return_t result = task_info(mach_task_self(), TASK_VM_INFO, (task_info_t)&vm_info, &count);
     if (result == KERN_SUCCESS && count >= TASK_VM_INFO_REV4_COUNT) {
         limit = (NSUInteger)(vm_info.phys_footprint + vm_info.limit_bytes_remaining) / MEGABYTE;
-        NSLog(@"*** Memory limit = %lu MB", (unsigned long)limit);
+        logDebug(@"*** Memory limit = %lu MB", (unsigned long)limit);
     } else if (!strcmp(system.machine, "iPhone6,2")) {
         limit = 650;
-        NSLog(@"*** Memory limit = %lu MB", (unsigned long)limit);
+        logDebug(@"*** Memory limit = %lu MB", (unsigned long)limit);
     } else {
         limit = MIN(2098, megabytes * 70 / 100);
-        NSLog(@"*** Memory limit = %lu MB (estimated)", (unsigned long)limit);
+        logDebug(@"*** Memory limit = %lu MB (estimated)", (unsigned long)limit);
     }
     
     // The size of the initial block needs to be under the memory warning limit in order for one to be reliably sent.
     NSUInteger initial = limit * 70 / 100;
-    NSLog(@"*** Dirtying an initial block of %lu MB", (unsigned long)initial);
+    logDebug(@"*** Dirtying an initial block of %lu MB", (unsigned long)initial);
     [self consumeMegabytes:initial];
     
-    NSLog(@"*** Dirtying remaining memory in ~2 seconds");
+    logDebug(@"*** Dirtying remaining memory in ~2 seconds");
     NSTimeInterval timeInterval = 2.0 / (limit - initial);
     [NSTimer scheduledTimerWithTimeInterval:timeInterval target:self selector:@selector(timerFired) userInfo:nil repeats:YES];
 }

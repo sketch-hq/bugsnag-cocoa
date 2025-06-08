@@ -13,17 +13,24 @@ import Foundation
  */
 internal class UserSessionOverrideScenario: Scenario {
 
-    override func startBugsnag() {
+    override func configure() {
+        super.configure()
         self.config.autoTrackSessions = false;
-        super.startBugsnag()
     }
 
     override func run() {
         Bugsnag.setUser("abc", withEmail: nil, andName: nil)
         Bugsnag.addOnSession { (session) -> Bool in
-            session.setUser("customId", withEmail: "customEmail", andName: "customName")
+            session.setUser("sessionCustomId", withEmail: "sessionCustomEmail", andName: "sessionCustomName")
             return true
         }
         Bugsnag.startSession()
+
+        let error = NSError(domain: "UserIdScenario", code: 100, userInfo: nil)
+        Bugsnag.notifyError(error) { (event) -> Bool in
+            event.setUser("errorCustomId", withEmail: "errorCustomEmail", andName: "errorCustomName")
+            return true
+        }
+
     }
 }

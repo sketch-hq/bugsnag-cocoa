@@ -31,38 +31,22 @@
 #ifndef HDR_BSG_KSCrashState_h
 #define HDR_BSG_KSCrashState_h
 
+#include <stdbool.h>
+#include <stdint.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#include <stdbool.h>
-#include <stdint.h>
-#include "BSG_KSCrashType.h"
-
 typedef struct {
 
     // Saved data
-
-    /** Total time elapsed in the foreground since the last crash. */
-    double foregroundDurationSinceLastCrash;
-
-    /** Total time backgrounded elapsed since the last crash. */
-    double backgroundDurationSinceLastCrash;
-
-    /** Number of app launches since the last crash. */
-    int launchesSinceLastCrash;
-
-    /** Number of sessions (launch, resume from suspend) since last crash. */
-    int sessionsSinceLastCrash;
 
     /** Total time elapsed in the foreground since launch. */
     double foregroundDurationSinceLaunch;
 
     /** Total time backgrounded elapsed since launch. */
     double backgroundDurationSinceLaunch;
-
-    /** Number of sessions (launch, resume from suspend) since app launch. */
-    int sessionsSinceLaunch;
 
     /** If true, the application crashed on the previous launch. */
     bool crashedLastLaunch;
@@ -101,10 +85,6 @@ bool bsg_kscrashstate_init(const char *stateFilePath, BSG_KSCrash_State *state);
  */
 void bsg_kscrashstate_notifyAppInForeground(bool isInForeground);
 
-/** Notify the crash reporter that the application is terminating.
- */
-void bsg_kscrashstate_notifyAppTerminate(void);
-
 /** Notify the crash reporter that the application has crashed.
  */
 void bsg_kscrashstate_notifyAppCrash(void);
@@ -116,10 +96,8 @@ const BSG_KSCrash_State *bsg_kscrashstate_currentState(void);
 /**
  * Updates the stats for duration in foreground/background. This needs to
  * be updated whenever an error report is captured.
- *
- * @param state the kscrash state
  */
-void bsg_kscrashstate_updateDurationStats(BSG_KSCrash_State *const state);
+void bsg_kscrashstate_updateDurationStats(void);
 
 #ifdef __cplusplus
 }

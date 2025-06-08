@@ -1,12 +1,16 @@
-#import "StopSessionOOMScenario.h"
+#import "Scenario.h"
+#import "Logging.h"
+
+@interface StopSessionOOMScenario : Scenario
+@end
 
 @implementation StopSessionOOMScenario
 
-- (void)startBugsnag {
+- (void)configure {
+    [super configure];
     self.config.autoTrackSessions = NO;
     BugsnagErrorTypes *errorTypes = [BugsnagErrorTypes new];
     self.config.enabledErrorTypes = errorTypes;
-    [super startBugsnag];
 }
 
 - (void)run {

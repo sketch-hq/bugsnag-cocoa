@@ -6,13 +6,18 @@
 //  Copyright © 2020 Bugsnag. All rights reserved.
 //
 
-#import "BreadcrumbCallbackRemovalScenario.h"
+#import "Scenario.h"
+#import "Logging.h"
+
+@interface BreadcrumbCallbackRemovalScenario : Scenario
+@end
 
 @implementation BreadcrumbCallbackRemovalScenario
 
-- (void)startBugsnag {
+- (void)configure {
+    [super configure];
     self.config.autoTrackSessions = false;
-    self.config.enabledBreadcrumbTypes = BSGBreadcrumbTypeManual;
+    self.config.enabledBreadcrumbTypes = BSGEnabledBreadcrumbTypeUser;
 
     [self.config addOnBreadcrumbBlock:^BOOL(BugsnagBreadcrumb * _Nonnull breadcrumb) {
         NSMutableDictionary *dict = [breadcrumb.metadata mutableCopy];
@@ -25,10 +30,8 @@
         breadcrumb.message = @"Feliz Navidad";
         return true;
     };
-    [self.config addOnBreadcrumbBlock:block];
-    [self.config removeOnBreadcrumbBlock:block];
-
-    [super startBugsnag];
+    BugsnagOnBreadcrumbRef onBreadcrumb = [self.config addOnBreadcrumbBlock:block];
+    [self.config removeOnBreadcrumb:onBreadcrumb];
 }
 
 - (void)run {

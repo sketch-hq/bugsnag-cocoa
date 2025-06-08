@@ -4,29 +4,27 @@
 //
 
 #import <Bugsnag/Bugsnag.h>
-
-// These headers expose some Bugsnag private APIs
-#import "AttachCustomStacktraceHook.h"
-#import "BugsnagHooks.h"
+#import <BugsnagNetworkRequestPlugin/BugsnagNetworkRequestPlugin.h>
+#import "FixtureConfig.h"
 
 NS_ASSUME_NONNULL_BEGIN
+
+void logInternal(const char* level, NSString *format, va_list args);
 
 void markErrorHandledCallback(const BSG_KSCrashReportWriter *writer);
 
 @interface Scenario : NSObject
 
+@property (strong, nonatomic, nonnull) FixtureConfig *fixtureConfig;
 @property (strong, nonatomic, nonnull) BugsnagConfiguration *config;
+@property (strong, nonatomic, nonnull) NSArray<NSString *> *args;
+@property (nonatomic) NSInteger launchCount;
 
-+ (Scenario *)createScenarioNamed:(NSString *)className withConfig:(BugsnagConfiguration *)config;
+- (instancetype)initWithFixtureConfig:(FixtureConfig *)config args:( NSArray<NSString *> * _Nonnull )args launchCount:(NSInteger)launchCount;
 
-- (instancetype)initWithConfig:(BugsnagConfiguration *)config;
+- (void)configure;
 
-/**
- * Blocks the calling thread until network connectivity to the notify endpoint has been verified.
- */
-- (void)waitForNetworkConnectivity;
-
-/**
+    /**
  * Executes the test case
  */
 - (void)run;
@@ -35,9 +33,19 @@ void markErrorHandledCallback(const BSG_KSCrashReportWriter *writer);
 
 - (void)didEnterBackgroundNotification;
 
-@property (nonatomic, strong, nullable) NSString *eventMode;
+/**
+ * Background the app for the specified number of seconds.
+ * If the value is < 0, background forever.
+ */
+- (void)enterBackgroundForSeconds:(NSInteger)seconds;
 
-- (void)performBlockAndWaitForEventDelivery:(dispatch_block_t)block NS_SWIFT_NAME(performBlockAndWaitForEventDelivery(_:));
+// Wait for the next event to be delivered, and then run a block on the main thread.
+- (void)waitForEventDelivery:(dispatch_block_t)deliveryBlock andThen:(dispatch_block_t)thenBlock;
+
+// Wait for the next session to be delivered, and then run a block on the main thread.
+- (void)waitForSessionDelivery:(dispatch_block_t)deliveryBlock andThen:(dispatch_block_t)thenBlock;
+
++ (void)clearPersistentData;
 
 @end
 

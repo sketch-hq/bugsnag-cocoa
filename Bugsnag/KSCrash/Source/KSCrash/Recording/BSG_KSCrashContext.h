@@ -30,10 +30,6 @@
 #ifndef HDR_BSG_KSCrashContext_h
 #define HDR_BSG_KSCrashContext_h
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include "BSG_KSCrashReportWriter.h"
 #include "BSG_KSCrashSentry.h"
 #include "BSG_KSCrashState.h"
@@ -41,14 +37,9 @@ extern "C" {
 #include <signal.h>
 #include <stdbool.h>
 
-typedef struct {
-    /** If YES, introspect memory contents during a crash.
-     * Any Objective-C objects or C strings near the stack pointer or referenced
-     * by cpu registers or exceptions will be recorded in the crash report,
-     * along with their contents.
-     */
-    bool enabled;
-} BSG_KSCrash_IntrospectionRules;
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 typedef struct {
     /** A unique identifier (UUID). */
@@ -60,22 +51,13 @@ typedef struct {
     /** System information in JSON format (to be written to the report). */
     char *systemInfoJSON;
 
-    /** User information in JSON format (to be written to the report). */
-    char *userInfoJSON;
-
-    /** When writing the crash report, print a stack trace to STDOUT as well. */
-    bool printTraceToStdout;
-
     /** The types of crashes that will be handled. */
     BSG_KSCrashType handlingCrashTypes;
-
-    /** Rules for introspecting Objective-C objects. */
-    BSG_KSCrash_IntrospectionRules introspectionRules;
 
     /** Callback allowing the application the opportunity to add extra data to
      * the report file. Application MUST NOT call async-unsafe methods!
      */
-    BSGReportCallback onCrashNotify;
+    BSG_KSReportWriteCallback onCrashNotify;
 
     /**
      * File path to write the crash report

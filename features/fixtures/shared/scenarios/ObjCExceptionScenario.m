@@ -24,35 +24,26 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#import "ObjCExceptionScenario.h"
+#import "MarkUnhandledHandledScenario.h"
+#import "Logging.h"
 
 /**
  * Throw an uncaught Objective-C exception. It's possible to generate a better crash report here
  * compared to the C++ Exception case because NSUncaughtExceptionHandler can be used,
  * which isn't available for C++ extensions.
  */
-@implementation ObjCExceptionScenario
-
-- (void)startBugsnag {
-    self.config.autoTrackSessions = NO;
-    [super startBugsnag];
-}
-
-- (void)run  __attribute__((noreturn)) {
-    @throw [NSException exceptionWithName:NSGenericException reason:@"An uncaught exception! SCREAM."
-                                 userInfo:@{NSLocalizedDescriptionKey: @"I'm in your program, catching your exceptions!"}];
-}
-
+@interface ObjCExceptionScenario : Scenario
 @end
 
-@implementation ObjCExceptionOverrideScenario
+@implementation ObjCExceptionScenario
 
-- (void)startBugsnag {
+- (void)configure {
+    [super configure];
     self.config.autoTrackSessions = NO;
-    [super startBugsnag];
 }
 
 - (void)run  __attribute__((noreturn)) {
+    [[NSThread mainThread] setName:@"BSG MAIN THREAD"];
     @throw [NSException exceptionWithName:NSGenericException reason:@"An uncaught exception! SCREAM."
                                  userInfo:@{NSLocalizedDescriptionKey: @"I'm in your program, catching your exceptions!"}];
 }

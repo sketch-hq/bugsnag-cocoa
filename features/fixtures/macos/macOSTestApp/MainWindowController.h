@@ -12,6 +12,8 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface MainWindowController : NSWindowController
 
+- (void)startFixture;
+
 @end
 
 NS_ASSUME_NONNULL_END

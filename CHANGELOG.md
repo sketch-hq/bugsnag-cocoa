@@ -1,6 +1,626 @@
 Changelog
 =========
 
+## 6.32.2 (2025-03-25)
+
+### Bug Fixes
+
+* Fixed a potential invalid pointer crash when updating/removing feature flags.
+  [#1754](https://github.com/bugsnag/bugsnag-cocoa/pull/1754)
+
+## 6.32.1 (2025-02-27)
+
+### Bug Fixes
+
+* Fixed the issue causing flags cleared by calling `+[Bugsnag clearFeatureFlagWithName:]` to appear in crash reports.
+  [#1740](https://github.com/bugsnag/bugsnag-cocoa/pull/1740)
+
+## 6.32.0 (2025-02-11)
+
+### Enhancements
+
+* Added `file`, `lineNumber` and `columnNumber` properties to `BugsnagStackframe` public header. 
+  [#1728](https://github.com/bugsnag/bugsnag-cocoa/pull/1728)
+
+## 6.31.0 (2025-01-13)
+
+### Enhancements
+
+* Disabled assertions on release build.
+  [1717](https://github.com/bugsnag/bugsnag-cocoa/pull/1717)
+
+* Optimized feature flags store.
+  [1715](https://github.com/bugsnag/bugsnag-cocoa/pull/1715)
+
+## 6.30.2 (2024-11-07)
+
+### Bug Fixes
+
+* Disable calls to os_proc_available_memory() on Catalyst due to missing API in earlier versions.
+  [1689](https://github.com/bugsnag/bugsnag-cocoa/pull/1689)
+
+## 6.30.1 (2024-07-25)
+
+### Bug Fixes
+
+* Removed duplicate BugsnagCorrelation.h header file that was causing warnings when building an app.
+  [1682](https://github.com/bugsnag/bugsnag-cocoa/pull/1682)
+
+* Mac Catalyst targets now only attempt to call os_proc_available_memory() from version 13.1.
+  [1680](https://github.com/bugsnag/bugsnag-cocoa/pull/1680)
+
+## 6.30.0 (2024-07-04)
+
+### Enhancements
+
+* Allow setting the correlation trace ID and span ID in an event, and harmonize the API with bugsnag-android. Note: This moves BugsnagCorrelation to a private API, which might cause minor breakage.
+  [1671](https://github.com/bugsnag/bugsnag-cocoa/pull/1671)
+
+### Bug Fixes
+
+* Ensure that all Bugsnag.notifyXYZ and BugsnagClient.notifyXYZ calls strip the correct number of stack frames, regardless of compiler optimization level.
+  [1668](https://github.com/bugsnag/bugsnag-cocoa/pull/1668)
+
+## 6.29.0 (2024-06-19)
+
+### Enhancements
+
+* Adds basic support for visionOS with SPM projects
+  [1660](https://github.com/bugsnag/bugsnag-cocoa/pull/1660)
+
+### Bug fixes
+
+* Prevent inlining of Bugsnag stack trace entries that are marked to be pruned away (to promote a consistent number of those frames).
+  [1661](https://github.com/bugsnag/bugsnag-cocoa/pull/1661)
+
+* Fix off-by-1 error when fetching register values on arm64 that could potentially run off the array.
+  [1635](https://github.com/bugsnag/bugsnag-cocoa/pull/1635)
+
+## 6.28.1 (2024-02-28)
+
+### Bug fixes
+
+* Fix race condition crash when calling BugsnagSessionTracker.addRuntimeVersionInfo from another thread.
+  [1632](https://github.com/bugsnag/bugsnag-cocoa/pull/1632)
+
+* Fixed the issue causing PrivacyInfo collisions when using Cocoapods
+  [1630](https://github.com/bugsnag/bugsnag-cocoa/pull/1630)
+
+## 6.28.0 (2023-12-13)
+
+### Enhancements
+
+* Free disk space is only sent on macOS, since the APIs to get it are now on the Apple grey list.
+  [1617](https://github.com/bugsnag/bugsnag-cocoa/pull/1617)
+
+* Remove calls to stat, which is now an API on the Apple grey list.
+  [1614](https://github.com/bugsnag/bugsnag-cocoa/pull/1614)
+
+* Add Privacy Manifest covering BugSnag data and API usage
+  [1616](https://github.com/bugsnag/bugsnag-cocoa/pull/1616)
+
+## 6.27.3 (2023-11-15)
+
+### Bug fixes
+
+* Remove include directives from inside of extern "C" sections because newer Xcode versions have issues with it
+  [1608](https://github.com/bugsnag/bugsnag-cocoa/pull/1608)
+
+* Setting user fields to nil will now clear them fully.
+  [1599](https://github.com/bugsnag/bugsnag-cocoa/pull/1599)
+
+* Crash fix: Detect and handle when WatchOS is running as an app rather than an extension.
+  [1588](https://github.com/bugsnag/bugsnag-cocoa/pull/1588)
+
+* Removed deprecated NXArchInfo code that was causing build issues.
+  [1584](https://github.com/bugsnag/bugsnag-cocoa/pull/1584)
+
+* Removed deprecated syscall on macos that was causing build issues.
+  [1577](https://github.com/bugsnag/bugsnag-cocoa/pull/1577)
+
+* Check app version to avoid detecting an app upgrade as an OOM
+  [1597](https://github.com/bugsnag/bugsnag-cocoa/pull/1597)
+
+## 6.27.2 (2023-07-24)
+
+### Enhancements
+
+* Device ID is now stored in a file that is shared between Bugsnag Cocoa and Bugsnag Cocoa Performance
+  [1568](https://github.com/bugsnag/bugsnag-cocoa/pull/1568)
+
+* Addressed new warning types introduced in Xcode 14.3
+  [1561](https://github.com/bugsnag/bugsnag-cocoa/pull/1561)
+
+## 6.27.0 (2023-05-15)
+
+### Enhancements
+
+* Added BSGErrorTypeCSharp enum value to identify C# events passed to the SDK
+  [1556](https://github.com/bugsnag/bugsnag-cocoa/pull/1556)
+
+### Bug fixes
+
+* Don't generate a new URLSession when copying a configuration.
+  [1554](https://github.com/bugsnag/bugsnag-cocoa/pull/1554)
+
+## 6.26.2 (2023-04-20)
+
+### Bug fixes
+
+* Persist events based on the original unhandled value
+  [1549](https://github.com/bugsnag/bugsnag-cocoa/pull/1549)
+
+* Fixed a race condition in BSGRunContext
+  [1548](https://github.com/bugsnag/bugsnag-cocoa/pull/1548)
+
+* Include event API key when serializing/deserializing to/from JSON
+  [1547](https://github.com/bugsnag/bugsnag-cocoa/pull/1547)
+
+## 6.26.1 (2023-03-28)
+
+### Bug fixes
+
+* Disabled breadcrumb disk storage when not required
+  [1534](https://github.com/bugsnag/bugsnag-cocoa/pull/1534)
+  
+* Improved reliability of obtaining memory metadata on iOS 13+
+  [1537](https://github.com/bugsnag/bugsnag-cocoa/pull/1537)
+
+## 6.26.0 (2023-03-08)
+
+### Enhancements
+
+* Added isStarted to Bugsnag and BugsnagClient
+  [1528](https://github.com/bugsnag/bugsnag-cocoa/pull/1528)
+
+### Bug fixes
+
+* Fixed some race conditions that could cause issues in rare cases.
+  [1529](https://github.com/bugsnag/bugsnag-cocoa/pull/1529)
+
+* onError blocked from running if releaseStage not in enabledReleaseStages.
+  [1518](https://github.com/bugsnag/bugsnag-cocoa/pull/1518)
+
+
+## 6.25.2 (2023-01-18)
+
+### Bug fixes
+
+* Workaround for thermal state lock re-entry bug on iOS 15.0.2-15.1.1.
+  [1514](https://github.com/bugsnag/bugsnag-cocoa/pull/1514)
+
+* Clean up compiler warnings about data races and nullability.
+  [1515](https://github.com/bugsnag/bugsnag-cocoa/pull/1515)
+
+## 6.25.1 (2022-12-07)
+
+### Bug fixes
+
+* Fix memory leak in the app hang detection code.
+  [#1507](https://github.com/bugsnag/bugsnag-cocoa/pull/1507)
+
+* Truncate additional data to reduce number of oversized payloads.
+  [#1501](https://github.com/bugsnag/bugsnag-cocoa/pull/1501)
+
+## 6.25.0 (2022-10-26)
+
+### Enhancements
+
+* Expand `configuration.attemptDeliveryOnCrash` to send Mach exceptions (e.g.
+  Swift fatal errors and bad memory accesses) at crash time.
+  [#1496](https://github.com/bugsnag/bugsnag-cocoa/pull/1496)
+
+## 6.24.0 (2022-10-05)
+
+### Enhancements
+
+* Add `configuration.attemptDeliveryOnCrash` to allow uncaught Objective-C
+  exceptions to be sent at crash time, prior to app termination. Use of this
+  feature may impair user experience and other crash reporters; please read
+  https://docs.bugsnag.com/platforms/ios/configuration-options/#attemptdeliveryoncrash
+  [#1488](https://github.com/bugsnag/bugsnag-cocoa/pull/1488)
+
+### Bug fixes
+
+* Disable OOM detection for Mac Catalyst apps.
+  [#1489](https://github.com/bugsnag/bugsnag-cocoa/pull/1489)
+
+## 6.23.1 (2022-09-21)
+
+### Bug fixes
+
+* Fix a crash on Mac Catalyst when user interacts with help menu.
+  [#1484](https://github.com/bugsnag/bugsnag-cocoa/issues/1484)
+  [#1485](https://github.com/bugsnag/bugsnag-cocoa/pull/1485)
+
+* Fix feature flag ordering and insertion performance.
+  [#1481](https://github.com/bugsnag/bugsnag-cocoa/pull/1481)
+
+## 6.23.0 (2022-09-14)
+
+### Enhancements
+
+* Add `leaveNetworkRequestBreadcrumbForTask:metrics:` to simplify leaving network
+  request breadcrumbs without overriding (swizzling) `NSURLSession` methods.
+  [#1472](https://github.com/bugsnag/bugsnag-cocoa/pull/1472)
+
+* Use `objc_direct` compiler attribute to reduce binary code size.
+  This prevents calling non-public APIs when linking Bugsnag as a dynamic framework.
+  [#1479](https://github.com/bugsnag/bugsnag-cocoa/pull/1479)
+
+## 6.22.3 (2022-09-01)
+
+### Bug fixes
+
+* Fix a crash that could occur when reporting internal errors during `+[Bugsnag start]`.
+  [#1474](https://github.com/bugsnag/bugsnag-cocoa/pull/1474)
+
+* Fix accuracy of `isLR` and `isPC` stack frame values.
+  [#1470](https://github.com/bugsnag/bugsnag-cocoa/pull/1470)
+
+## 6.22.2 (2022-08-17)
+
+### Bug fixes
+
+* Fix a crash when using `BugsnagNetworkRequestPlugin` with `GTMSessionFetcher`.
+  [#1465](https://github.com/bugsnag/bugsnag-cocoa/pull/1465)
+
+* Fix a regression introduced in 6.18.0 that caused incorrect C++ exception
+  stacktraces to be reported when Bugsnag is linked dynamically.
+  [#1463](https://github.com/bugsnag/bugsnag-cocoa/pull/1463)
+
+## 6.22.1 (2022-08-10)
+
+### Bug fixes
+
+* Fix Swift Package Manager build error due to use of `unsafeFlags`.
+
+## 6.22.0 (2022-08-10)
+
+### Enhancements
+
+* Increase default and maximum values for `configuration.maxBreadcrumbs` to 100 and 500, respectively.
+  [#1452](https://github.com/bugsnag/bugsnag-cocoa/pull/1452)
+
+* Trim breadcrumb messages & metadata in payloads that exceed the size limit.
+  [#1451](https://github.com/bugsnag/bugsnag-cocoa/pull/1451)
+
+* Truncate breadcrumb and metadata strings that are longer than `configuration.maxStringValueLength`.
+  [#1449](https://github.com/bugsnag/bugsnag-cocoa/pull/1449)
+
+* Add `+[BugsnagStackframe stackframesWithCallStackReturnAddresses:]` to public headers. 
+  [#1446](https://github.com/bugsnag/bugsnag-cocoa/pull/1446)
+
+### Bug fixes
+
+* Fix a potential deadlock when capturing the crashing thread's name.
+  [#1453](https://github.com/bugsnag/bugsnag-cocoa/pull/1453)
+
+* Attempt to send sessions stored on disk when connection regained.
+  [#1445](https://github.com/bugsnag/bugsnag-cocoa/pull/1445)
+
+* Set `user.id` to to `device.id` for all events and sessions if `BugsnagClient.user.id` is set to nil.
+  To prevent collection, set it to an empty string or update it in `OnSendError` / `OnSession`.
+  [#1442](https://github.com/bugsnag/bugsnag-cocoa/pull/1442)
+
+## 6.21.0 (2022-07-20)
+
+### Enhancements
+
+* Add `configuration.reportBackgroundAppHangs` to allow background app hangs to be reported.
+  [#1439](https://github.com/bugsnag/bugsnag-cocoa/pull/1439)
+
+* Add `freeMemory`, `memoryLimit` and `memoryUsage` to `metaData.app`.
+  Always report the device (not app) free memory in `device.freeMemory`.
+  [#1435](https://github.com/bugsnag/bugsnag-cocoa/pull/1435)
+
+## 6.20.0 (2022-07-13)
+
+### Enhancements
+
+* Feature flags can now be accessed in the onSend callbacks.
+  [#1432](https://github.com/bugsnag/bugsnag-cocoa/pull/1432)
+
+* Capture `userInfo` from all NSExceptions and include the `error` metadata tab for handled exceptions.
+  [#1428](https://github.com/bugsnag/bugsnag-cocoa/pull/1428)
+
+* Feature flags are now kept in order of insertion or modification rather than in alphabetical order.
+  [#1429](https://github.com/bugsnag/bugsnag-cocoa/pull/1429)
+
+* Send usage telemetry to Bugsnag for product improvement purposes. Can be disabled using `configuration.telemetry`.
+  [#1422](https://github.com/bugsnag/bugsnag-cocoa/pull/1422)
+
+### Bug fixes
+
+* Prevent reporting of OOMs on simulators. 
+  [#1421](https://github.com/bugsnag/bugsnag-cocoa/pull/1421)
+
+* Fix a rare crash in `BugsnagBreadcrumbsWriteCrashReport()`.
+  [#1430](https://github.com/bugsnag/bugsnag-cocoa/pull/1430)
+
+* Fix intermittent empty thread stacktraces.
+  [#1425](https://github.com/bugsnag/bugsnag-cocoa/pull/1425)
+
+## 6.19.0 (2022-06-29)
+
+### Enhancements
+
+* Capture the crashing thread's name when possible.
+  [#1406](https://github.com/bugsnag/bugsnag-cocoa/pull/1406)
+
+### Bug fixes
+
+* Ignore OOMs that occur while the app is inactive, reverting an inadvertent change in v6.16.4.
+  [#1416](https://github.com/bugsnag/bugsnag-cocoa/pull/1416)
+
+* Fix reporting of crashes that occur while device is locked in apps using `NSFileProtectionComplete`.
+  [#1415](https://github.com/bugsnag/bugsnag-cocoa/pull/1415)
+
+## 6.18.1 (2022-06-22)
+
+### Bug fixes
+
+* Remove `device.freeMemory` from OOM and Thermal Kill events.
+  This indicated the app's remaining quota rather than the device's free memory, so has been removed to avoid confusion.
+  [#1408](https://github.com/bugsnag/bugsnag-cocoa/pull/1408)
+
+* Fix a crash that could occur in apps that set `com.apple.developer.default-data-protection` to `NSFileProtectionComplete`.
+  [#1407](https://github.com/bugsnag/bugsnag-cocoa/pull/1407)
+
+## 6.18.0 (2022-06-08)
+
+### Enhancements
+
+* Add support for watchOS (>= 6.3).
+
+  Unhandled Objective-C & C++ exceptions will automatically be reported but OOMs,
+  app hangs, thermal kills, stack overflows, memory access issues and Swift fatal
+  errors cannot be detected due to Mach exception and signal APIs being
+  prohibited on watchOS.
+
+  For more information see [the documentation](https://docs.bugsnag.com/platforms/watchos/).
+
+* Add `configuration.telemetry` to allow sending of internal errors to be disabled.
+  [#1375](https://github.com/bugsnag/bugsnag-cocoa/pull/1375)
+
+### Bug fixes
+
+* Fix data races detected by TSan in `BSGRunContextUpdateTimestamp` and `UpdateAvailableMemory`. 
+  [#1384](https://github.com/bugsnag/bugsnag-cocoa/pull/1384)
+
+* Fix potential deadlocks caused by use of `libc` `printf` functions.
+  [#1397](https://github.com/bugsnag/bugsnag-cocoa/pull/1397)
+
+* Fix incorrect `device.time` in 32-bit crash reports.
+  [#1399](https://github.com/bugsnag/bugsnag-cocoa/pull/1399)
+
+## 6.17.1 (2022-05-18)
+
+### Bug fixes
+
+* Prevent error or session delivery being retried indefinitely.
+  [#1362](https://github.com/bugsnag/bugsnag-cocoa/pull/1362)
+  [#1367](https://github.com/bugsnag/bugsnag-cocoa/pull/1367)
+
+## 6.17.0 (2022-05-11)
+
+### Enhancements
+
+* Add `device.freeMemory` to OOM and Thermal Kill events on iOS 13 and later.
+  [#1357](https://github.com/bugsnag/bugsnag-cocoa/pull/1357)
+
+* Add `device.time` to OOM and Thermal Kill events.
+  [#1355](https://github.com/bugsnag/bugsnag-cocoa/pull/1355)
+
+## 6.16.8 (2022-05-04)
+
+### Changes
+
+* Change minimum supported iOS version to 9.0.
+  [#1352](https://github.com/bugsnag/bugsnag-cocoa/pull/1352)
+
+## 6.16.7 (2022-04-13)
+
+### Bug fixes
+
+* Fix underreporting of `device.totalMemory`, which now matches `NSProcessInfo.physicalMemory`.
+  [#1335](https://github.com/bugsnag/bugsnag-cocoa/pull/1335)
+
+* Skip unnecessary file reading at startup when no unexpected app termination is detected.
+  [#1334](https://github.com/bugsnag/bugsnag-cocoa/pull/1334)
+
+* Fix duplication of `app` and `device` data in session payloads.
+  [#1332](https://github.com/bugsnag/bugsnag-cocoa/pull/1332)
+
+## 6.16.6 (2022-04-06)
+
+### Changes
+
+* Add Flutter notifier support.
+  [#1328](https://github.com/bugsnag/bugsnag-cocoa/pull/1328)
+
+## 6.16.5 (2022-03-30)
+
+### Bug fixes
+
+* Fix `-[NSProxy doesNotRecognizeSelector:]` crash when using `BugsnagNetworkRequestPlugin` in projects that use the New Relic SDK.
+  [#1324](https://github.com/bugsnag/bugsnag-cocoa/pull/1324)
+
+## 6.16.4 (2022-03-02)
+
+### Bug fixes
+
+* Fix crash in `CPPExceptionTerminate()` if `throw` was called without an exception.
+  [#1312](https://github.com/bugsnag/bugsnag-cocoa/pull/1312)
+
+* Fix accuracy of `app.inForeground` and prevent reporting of hangs during background launches.
+  [#1307](https://github.com/bugsnag/bugsnag-cocoa/pull/1307)
+
+## 6.16.3 (2022-02-23)
+
+### Bug fixes
+
+* Fix incorrect OOM session info after manually pausing or stopping a session.
+  [#1301](https://github.com/bugsnag/bugsnag-cocoa/pull/1301)
+
+* Improve accuracy of `metaData.device.lowMemoryWarning`.
+  [#1296](https://github.com/bugsnag/bugsnag-cocoa/pull/1296)
+
+* Stop reporting `SIGPIPE` errors in apps that set `SIG_IGN`.
+  [#1295](https://github.com/bugsnag/bugsnag-cocoa/pull/1295)
+
+## 6.16.2 (2022-01-26)
+
+### Bug fixes
+
+* Improve reliability of crash reporting when multiple crashes occur concurrently.
+  [#1286](https://github.com/bugsnag/bugsnag-cocoa/pull/1286)
+
+## 6.16.1 (2022-01-19)
+
+### Bug fixes
+
+* Fix missing imports when building with `CLANG_ENABLE_MODULES=NO`
+  [#1284](https://github.com/bugsnag/bugsnag-cocoa/pull/1284)
+
+* Improve crash report writing performance with buffered output.
+  [#1281](https://github.com/bugsnag/bugsnag-cocoa/pull/1281)
+
+## 6.16.0 (2022-01-12)
+
+### Enhancements
+
+* New APIs to support forthcoming feature flag and experiment functionality.
+  For more information, please see https://docs.bugsnag.com/product/features-experiments
+  [#1279](https://github.com/bugsnag/bugsnag-cocoa/pull/1279)
+
+### Bug fixes
+
+* Fix missing user.id in OOM events with no active session.
+  [#1274](https://github.com/bugsnag/bugsnag-cocoa/pull/1274)
+
+* Improve crash report writing performance and size on disk.
+  [#1273](https://github.com/bugsnag/bugsnag-cocoa/pull/1273)
+
+## 6.15.2 (2022-01-05)
+
+### Bug fixes
+
+* Detect hangs during launch of UIScene based apps.
+  [#1263](https://github.com/bugsnag/bugsnag-cocoa/pull/1263)
+
+* Stop persisting changes made by `OnSendError` callbacks if delivery needs to be retried.
+  [#1262](https://github.com/bugsnag/bugsnag-cocoa/pull/1262)
+
+* Fix incorrect `device.freeDisk` in crash errors.
+  [#1256](https://github.com/bugsnag/bugsnag-cocoa/pull/1256)
+
+* Fix some potential deadlocks that could occur if a crash handler crashes.
+  [#1252](https://github.com/bugsnag/bugsnag-cocoa/pull/1252)
+
+## 6.15.1 (2021-12-08)
+
+### Bug fixes
+
+* Fix `UIApplicationState` detection when started from a SwiftUI app's `init()` function.
+  This fixes false positive OOMs on iOS 15 for apps that have been prewarmed without transitioning to the foreground.
+  [#1248](https://github.com/bugsnag/bugsnag-cocoa/pull/1248)
+
+* Load configuration from the plist instead of using defaults when calling Bugsnag.start(withApiKey:)
+  [#1245](https://github.com/bugsnag/bugsnag-cocoa/pull/1245)
+
+## 6.15.0 (2021-12-01)
+
+### Enhancements
+
+* New APIs to allow `OnBreadcrumb`, `OnSendError` and `OnSession` Swift closures to be removed.
+  The following APIs are now deprecated and will be removed in the next major release:
+  * `removeOnBreadcrumb(block:)`
+  * `removeOnSendError(block:)`
+  * `removeOnSession(block:)`
+  [#1240](https://github.com/bugsnag/bugsnag-cocoa/pull/1240)
+
+* Include metadata in breadcrumbs for `UIWindow` / `NSWindow` notifications.
+  [#1238](https://github.com/bugsnag/bugsnag-cocoa/pull/1238)
+
+## 6.14.4 (2021-11-22)
+
+### Bug fixes
+
+* Fix a crash in `-[BSGURLSessionTracingDelegate URLSession:task:didFinishCollectingMetrics:]` for tasks with no request.
+  [#1230](https://github.com/bugsnag/bugsnag-cocoa/pull/1230)
+
+## 6.14.3 (2021-11-03)
+
+### Bug fixes
+
+* Use `LC_FUNCTION_STARTS` to improve symbolication accuracy.
+  [#1214](https://github.com/bugsnag/bugsnag-cocoa/pull/1214)
+
+## 6.14.2 (2021-10-27)
+
+### Bug fixes
+
+* Fix missing `configuration.user` and manually resumed `session` info in unhandled errors.
+  [#1215](https://github.com/bugsnag/bugsnag-cocoa/pull/1215)
+
+## 6.14.1 (2021-10-20)
+
+### Bug fixes
+
+* Disable automatic session tracking in app extensions (it was not working as intended.)
+  [#1211](https://github.com/bugsnag/bugsnag-cocoa/pull/1211)
+
+* Stop logging "[ERROR] Failed to install crash handler..." if a debugger is attached.
+  [#1210](https://github.com/bugsnag/bugsnag-cocoa/pull/1210)
+
+* Include the word "request" in network request breadcrumb messages.
+  [#1209](https://github.com/bugsnag/bugsnag-cocoa/pull/1209)
+
+* Prevent a crash that can occur when `-[BSGURLSessionTracingProxy forwardInvocation:]` calls `-[NSInvocation selector]`.
+  [#1208](https://github.com/bugsnag/bugsnag-cocoa/pull/1208)
+
+* Apply `redactedKeys` to breadcrumb metadata.
+  [#1204](https://github.com/bugsnag/bugsnag-cocoa/pull/1204)
+
+## 6.14.0 (2021-10-06)
+
+### Enhancements
+
+* Capture and report thread states (running, stopped, waiting, etc.) 
+  [#1200](https://github.com/bugsnag/bugsnag-cocoa/pull/1200)
+
+### Bug fixes
+
+* Disable app hang detection for app extensions.
+  [#1198](https://github.com/bugsnag/bugsnag-cocoa/pull/1198)
+
+## 6.13.0 (2021-09-29)
+
+### Enhancements
+
+* Bugsnag can now automatically capture breadcrumbs for network requests made via `NSURLSession`.
+  To use this functionality, install the `BugsnagNetworkRequestPlugin` plugin and then enable it in your `BugsnagConfiguration`.
+  For more information see [the documentation](https://docs.bugsnag.com/platforms/ios/customizing-breadcrumbs/#capturing-network-requests).
+
+## 6.12.2 (2021-09-22)
+
+### Bug fixes
+
+* Stop dropping breadcrumbs when provided invalid metadata (that is not JSON convertible.)
+  [#1187](https://github.com/bugsnag/bugsnag-cocoa/pull/1187)
+
+* Fix Swift fatal error parsing for messages with no filename.
+  [#1186](https://github.com/bugsnag/bugsnag-cocoa/pull/1186)
+
+## 6.12.1 (2021-09-15)
+
+### Bug fixes
+
+* Fix a regression where the session was not captured at launch if Bugsnag was started before
+  `willFinishLaunchingWithOptions` in iOS apps that do not adopt the UIScene life-cycle.
+  [#1180](https://github.com/bugsnag/bugsnag-cocoa/pull/1180)
+
 ## 6.12.0 (2021-09-01)
 
 ### Enhancements

@@ -8,6 +8,8 @@
 
 #import <Foundation/Foundation.h>
 
+#import <Bugsnag/BugsnagDefines.h>
+
 @class BugsnagStackframe;
 
 /**
@@ -16,12 +18,14 @@
 typedef NS_OPTIONS(NSUInteger, BSGErrorType) {
     BSGErrorTypeCocoa NS_SWIFT_NAME(cocoa), // Swift won't bring in the zeroeth option by default
     BSGErrorTypeC NS_SWIFT_NAME(c), // Fix Swift auto-capitalisation
-    BSGErrorTypeReactNativeJs
+    BSGErrorTypeReactNativeJs,
+    BSGErrorTypeCSharp,
 };
 
 /**
  * An Error represents information extracted from an NSError, NSException, or other error source.
  */
+BUGSNAG_EXTERN
 @interface BugsnagError : NSObject
 
 /**
