@@ -32,6 +32,7 @@
 #import "BugsnagClient+Private.h"
 #import "BugsnagInternals.h"
 #import "BugsnagLogger.h"
+#import "BSGFileLocations.h"
 #import "BSGUtils.h"
 
 static BugsnagClient *bsg_g_bugsnag_client = NULL;
@@ -53,6 +54,19 @@ BSG_OBJC_DIRECT_MEMBERS
 + (BugsnagClient *_Nonnull)startWithConfiguration:(BugsnagConfiguration *_Nonnull)configuration {
     @synchronized(self) {
         if (bsg_g_bugsnag_client == nil) {
+
+            // --- section added by Sketch
+            // NOTE: Register the subdirectory (if one exists) to use as Bugsnag's root path before
+            // any other code that calls `BSGFileLocations.current`.
+            NSString *subdirectory = configuration.exclusiveSubdirectory ?: nil;
+            BSGFileLocations *fileLocations = [BSGFileLocations currentWithSubdirectory:subdirectory];
+            if (fileLocations.usesExclusiveSubdirectory) {
+                if (![fileLocations lockForWritingBlocking]) {
+                    bsg_log_err(@"Warning: Failed to lock exclusive subdirectory.");
+                }
+            }
+            // --- end of section added by Sketch
+
             [BSGStorageMigratorV0V1 migrate];
             bsg_g_bugsnag_client = [[BugsnagClient alloc] initWithConfiguration:configuration];
             [bsg_g_bugsnag_client start];
