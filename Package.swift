@@ -1,12 +1,13 @@
-// swift-tools-version:5.9
+// swift-tools-version:5.3
 import PackageDescription
 
 let package = Package(
     name: "Bugsnag",
     platforms: [
-        .macOS(.v13),
+        .macOS(.v10_11),
         .tvOS("9.2"),
-        .iOS("16.4"),
+        .iOS("9.0"),
+        .watchOS("6.3"),
     ],
     products: [
         .library(name: "Bugsnag", targets: ["Bugsnag"]),
