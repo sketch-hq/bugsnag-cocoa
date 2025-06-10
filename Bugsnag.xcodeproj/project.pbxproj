@@ -832,7 +832,6 @@
 		3A700AF824A6492F0068CD1B /* BugsnagError.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 3A700A9124A63A8E0068CD1B /* BugsnagError.h */; };
 		3A700AF924A6492F0068CD1B /* BugsnagDeviceWithState.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 3A700A9224A63A8E0068CD1B /* BugsnagDeviceWithState.h */; };
 		3A700AFA24A6492F0068CD1B /* BugsnagMetadata.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 3A700A9324A63A8E0068CD1B /* BugsnagMetadata.h */; };
-		59041E9E28B7AFC600F3B9A8 /* AppKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 59041E9D28B7AFC600F3B9A8 /* AppKit.framework */; };
 		9627A1352D91CF9300696E3C /* BSGAtomicFeatureFlagStoreTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 9627A1342D91CF9300696E3C /* BSGAtomicFeatureFlagStoreTests.m */; };
 		9627A1362D91CF9300696E3C /* BSGAtomicFeatureFlagStoreTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 9627A1342D91CF9300696E3C /* BSGAtomicFeatureFlagStoreTests.m */; };
 		9627A1372D91CF9300696E3C /* BSGAtomicFeatureFlagStoreTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 9627A1342D91CF9300696E3C /* BSGAtomicFeatureFlagStoreTests.m */; };
@@ -1645,7 +1644,6 @@
 		3A700A9124A63A8E0068CD1B /* BugsnagError.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = BugsnagError.h; sourceTree = "<group>"; };
 		3A700A9224A63A8E0068CD1B /* BugsnagDeviceWithState.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = BugsnagDeviceWithState.h; sourceTree = "<group>"; };
 		3A700A9324A63A8E0068CD1B /* BugsnagMetadata.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = BugsnagMetadata.h; sourceTree = "<group>"; };
-		59041E9D28B7AFC600F3B9A8 /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX12.3.sdk/System/Library/Frameworks/AppKit.framework; sourceTree = DEVELOPER_DIR; };
 		9627A1342D91CF9300696E3C /* BSGAtomicFeatureFlagStoreTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = BSGAtomicFeatureFlagStoreTests.m; sourceTree = "<group>"; };
 		9627A1392D92200300696E3C /* WriterTestsSupport.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WriterTestsSupport.h; sourceTree = "<group>"; };
 		9627A13A2D92201B00696E3C /* WriterTestsSupport.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = WriterTestsSupport.m; sourceTree = "<group>"; };
@@ -1738,7 +1736,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				59041E9E28B7AFC600F3B9A8 /* AppKit.framework in Frameworks */,
 				E746292F24890C3900F92D67 /* SystemConfiguration.framework in Frameworks */,
 				E746292D24890C3300F92D67 /* Foundation.framework in Frameworks */,
 			);
@@ -2359,7 +2356,6 @@
 		E746292324890BFE00F92D67 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
-				59041E9D28B7AFC600F3B9A8 /* AppKit.framework */,
 				CBEC89372A4AC8520088A3CE /* UIKit.framework */,
 				CBBDE9C7280069E40070DCD3 /* Foundation.framework */,
 				CBBDE9C5280069D90070DCD3 /* libz.tbd */,
