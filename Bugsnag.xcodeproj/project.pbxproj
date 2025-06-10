@@ -1567,7 +1567,7 @@
 		017DCF8B2874212F000ECB22 /* BSGTelemetry.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = BSGTelemetry.m; sourceTree = "<group>"; };
 		017DCF9A287422BB000ECB22 /* BSGTelemetryTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = BSGTelemetryTests.m; sourceTree = "<group>"; };
 		01840B6D25DC26E200F95648 /* BSGEventUploader.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = BSGEventUploader.h; sourceTree = "<group>"; };
-		01840B6E25DC26E200F95648 /* BSGEventUploader.m */ = {isa = PBXFileReference; indentWidth = 2; lastKnownFileType = sourcecode.c.objc; path = BSGEventUploader.m; sourceTree = "<group>"; tabWidth = 2; };
+		01840B6E25DC26E200F95648 /* BSGEventUploader.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = BSGEventUploader.m; sourceTree = "<group>"; };
 		01847D942644140F00ADA4C7 /* BSGInternalErrorReporter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BSGInternalErrorReporter.h; sourceTree = "<group>"; };
 		01847D952644140F00ADA4C7 /* BSGInternalErrorReporter.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BSGInternalErrorReporter.m; sourceTree = "<group>"; };
 		01847DAB26441A5E00ADA4C7 /* BSGInternalErrorReporterTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = BSGInternalErrorReporterTests.m; sourceTree = "<group>"; };
