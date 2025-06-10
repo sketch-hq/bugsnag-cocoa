@@ -70,22 +70,25 @@ static NSString *bugsnagPath(NSString *fsVersion, NSString *subdirectory) {
 
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
-        if (subdirectory != nil) {
-            rootPath = [NSString stringWithFormat:@"%@/com.bugsnag.Bugsnag/%@/%@/%@/%@",
-                        cachesDirectory(),
-                        // Processes that don't have an Info.plist have no bundleIdentifier
-                        NSBundle.mainBundle.bundleIdentifier ?: NSProcessInfo.processInfo.processName,
-                        fsVersion, BSGExclusiveDirectoryContainerName, subdirectory];
-        } else {
-            rootPath = [NSString stringWithFormat:@"%@/com.bugsnag.Bugsnag/%@/%@",
-                        cachesDirectory(),
-                        // Processes that don't have an Info.plist have no bundleIdentifier
-                        NSBundle.mainBundle.bundleIdentifier ?: NSProcessInfo.processInfo.processName,
-                        fsVersion];
-        }
+        rootPath = [NSString stringWithFormat:@"%@/com.bugsnag.Bugsnag/%@/%@",
+                    cachesDirectory(),
+                    // Processes that don't have an Info.plist have no bundleIdentifier
+                    NSBundle.mainBundle.bundleIdentifier ?: NSProcessInfo.processInfo.processName,
+                    fsVersion];
 
         ensureDirExists(rootPath);
     });
+
+    // --- begin section added by Sketch
+    // if `subdirectory` is specified, append that to the exclusive directory container
+    // inside the root path, and return that instead.
+    if (subdirectory != nil) {
+        NSString *exclusivePath = [NSString stringWithFormat:@"%@/%@/%@",
+                                   rootPath, BSGExclusiveDirectoryContainerName, subdirectory];
+        ensureDirExists(exclusivePath);
+        return exclusivePath;
+    }
+    // --- end section added by Sketch
 
     return rootPath;
 }
