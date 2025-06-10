@@ -43,11 +43,11 @@ static NSString *cachesDirectory(void) {
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
 #if TARGET_OS_TV
-    // On tvOS, locations outside the caches directory are not writable, so fall back to using that.
-    // https://developer.apple.com/library/archive/documentation/General/Conceptual/AppleTV_PG/index.html#//apple_ref/doc/uid/TP40015241
-    NSSearchPathDirectory directory = NSCachesDirectory;
+        // On tvOS, locations outside the caches directory are not writable, so fall back to using that.
+        // https://developer.apple.com/library/archive/documentation/General/Conceptual/AppleTV_PG/index.html#//apple_ref/doc/uid/TP40015241
+        NSSearchPathDirectory directory = NSCachesDirectory;
 #else
-    NSSearchPathDirectory directory = NSApplicationSupportDirectory;
+        NSSearchPathDirectory directory = NSApplicationSupportDirectory;
 #endif
         NSError *error = nil;
         NSURL *url = [NSFileManager.defaultManager URLForDirectory:directory inDomain:NSUserDomainMask appropriateForURL:nil create:NO error:&error];

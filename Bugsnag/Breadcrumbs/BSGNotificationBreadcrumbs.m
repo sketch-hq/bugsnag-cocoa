@@ -399,20 +399,20 @@ static NSString *nullStringIfBlank(NSString *str) {
     [self addBreadcrumbWithType:BSGBreadcrumbTypeUser forNotificationName:notification.name metadata:
      label.length ? @{BSGKeyLabel : label} : nil];
 #elif TARGET_OS_OSX
-  NSControl *control = notification.object;
-  NSMutableDictionary *dict = NSMutableDictionary.new;
-  if ([control respondsToSelector:@selector(accessibilityLabel)]) {
-      NSString *label = control.accessibilityLabel;
-      if (label.length > 0) {
-          [dict setObject:label forKey:BSGKeyLabel];
-      }
-  }
-  [dict setObject:NSStringFromClass(control.class) forKey:@"controlClass"];
-  NSUserInterfaceItemIdentifier identifier = control.identifier;
-  if (identifier) {
-    [dict setObject:identifier forKey:@"controlIdentifier"];
-  }
-  [self addBreadcrumbWithType:BSGBreadcrumbTypeUser forNotificationName:notification.name metadata:dict];
+    NSControl *control = notification.object;
+    NSMutableDictionary *dict = NSMutableDictionary.new;
+    if ([control respondsToSelector:@selector(accessibilityLabel)]) {
+        NSString *label = control.accessibilityLabel;
+        if (label.length > 0) {
+            [dict setObject:label forKey:BSGKeyLabel];
+        }
+    }
+    [dict setObject:NSStringFromClass(control.class) forKey:@"controlClass"];
+    NSUserInterfaceItemIdentifier identifier = control.identifier;
+    if (identifier) {
+      [dict setObject:identifier forKey:@"controlIdentifier"];
+    }
+    [self addBreadcrumbWithType:BSGBreadcrumbTypeUser forNotificationName:notification.name metadata:dict];
 #endif
 }
 
