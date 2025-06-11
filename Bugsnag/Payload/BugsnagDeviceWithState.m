@@ -6,17 +6,19 @@
 //  Copyright © 2020 Bugsnag. All rights reserved.
 //
 
-#import "BugsnagPlatformConditional.h"
+#import "BugsnagDeviceWithState.h"
 
+#import "BSGHardware.h"
+#import "BSGRunContext.h"
+#import "BSGUtils.h"
 #import "BSG_KSCrashReportFields.h"
 #import "BSG_KSSystemInfo.h"
 #import "BSG_RFC3339DateTool.h"
-#import "BugsnagDevice+Private.h"
-#import "BugsnagDeviceWithState.h"
+#import "Bugsnag.h"
 #import "BugsnagCollections.h"
+#import "BugsnagDevice+Private.h"
 #import "BugsnagLogger.h"
 #import "BugsnagSystemState.h"
-#import "Bugsnag.h"
 
 NSMutableDictionary *BSGParseDeviceMetadata(NSDictionary *event) {
     NSMutableDictionary *device = [NSMutableDictionary new];
@@ -25,7 +27,7 @@ NSMutableDictionary *BSGParseDeviceMetadata(NSDictionary *event) {
     device[@"timezone"] = [event valueForKeyPath:@"system." BSG_KSSystemField_TimeZone];
     device[@"macCatalystiOSVersion"] = [event valueForKeyPath:@"system." BSG_KSSystemField_iOSSupportVersion];
 
-#if BSG_PLATFORM_SIMULATOR
+#if TARGET_OS_SIMULATOR
     device[@"simulator"] = @YES;
 #else
     device[@"simulator"] = @NO;
@@ -35,24 +37,17 @@ NSMutableDictionary *BSGParseDeviceMetadata(NSDictionary *event) {
     return device;
 }
 
-/**
- * Calculates the amount of free disk space on the device in bytes, for a given directory.
- * @param directory the directory whose disk space should be queried
- * @return free space in the number of bytes, or nil if this information could not be found
- */
-NSNumber *BSGDeviceFreeSpace(NSSearchPathDirectory directory) {
-    NSFileManager *fileManager = [NSFileManager defaultManager];
-    NSArray *searchPaths = NSSearchPathForDirectoriesInDomains(directory, NSUserDomainMask, true);
-    NSString *path = [searchPaths lastObject];
-
-    NSError *error;
-    NSDictionary *fileSystemAttrs =
-            [fileManager attributesOfFileSystemForPath:path error:&error];
-
-    if (!fileSystemAttrs) {
-        bsg_log_warn(@"Failed to read free disk space: %@", error);
+NSDictionary * BSGDeviceMetadataFromRunContext(const struct BSGRunContext *context) {
+    NSMutableDictionary *device = [NSMutableDictionary dictionary];
+#if BSG_HAVE_BATTERY
+    device[BSGKeyBatteryLevel] = @(context->batteryLevel);
+    // Our intepretation of "charging" really means "plugged in"
+    device[BSGKeyCharging] = BSGIsBatteryCharging(context->batteryState) ? @YES : @NO;
+#endif
+    if (@available(iOS 11.0, tvOS 11.0, watchOS 4.0, *)) {
+        device[BSGKeyThermalState] = BSGStringFromThermalState(context->thermalState);
     }
-    return fileSystemAttrs[NSFileSystemFreeSize];
+    return device;
 }
 
 @implementation BugsnagDeviceWithState
@@ -89,7 +84,7 @@ NSNumber *BSGDeviceFreeSpace(NSSearchPathDirectory directory) {
     [self populateFields:device dictionary:event];
     device.orientation = [event valueForKeyPath:@"user.state.deviceState.orientation"];
     device.freeMemory = [event valueForKeyPath:@"system." BSG_KSSystemField_Memory "." BSG_KSCrashField_Free];
-    device.freeDisk = BSGDeviceFreeSpace(NSCachesDirectory);
+    device.freeDisk = [event valueForKeyPath:@"system." BSG_KSSystemField_Disk "." BSG_KSCrashField_Free];
 
     NSString *val = [event valueForKeyPath:@"report.timestamp"];
 

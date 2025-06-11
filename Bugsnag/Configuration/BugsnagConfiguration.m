@@ -24,16 +24,15 @@
 // THE SOFTWARE.
 //
 
-#import "BugsnagPlatformConditional.h"
-
 #import "BugsnagConfiguration+Private.h"
 
 #import "BSGConfigurationBuilder.h"
-#import "BSG_RFC3339DateTool.h"
+#import "BSGDefines.h"
+#import "BSGMemoryFeatureFlagStore.h"
+#import "BSGKeys.h"
 #import "BugsnagApiClient.h"
 #import "BugsnagEndpointConfiguration.h"
 #import "BugsnagErrorTypes.h"
-#import "BugsnagKeys.h"
 #import "BugsnagLogger.h"
 #import "BugsnagMetadata+Private.h"
 #import "BugsnagUser+Private.h"
@@ -42,30 +41,28 @@ const NSUInteger BugsnagAppHangThresholdFatalOnly = INT_MAX;
 
 static const int BSGApiKeyLength = 32;
 
-// User info persistence keys
-static NSString * const kBugsnagUserEmailAddress = @"BugsnagUserEmailAddress";
-static NSString * const kBugsnagUserName = @"BugsnagUserName";
-static NSString * const kBugsnagUserUserId = @"BugsnagUserUserId";
+static NSURLSession *getConfigDefaultURLSession(void);
+static NSURLSession *getConfigDefaultURLSession(void) {
+    static dispatch_once_t once_t;
+    static NSURLSession *session;
+    dispatch_once(&once_t, ^{
+        session = [NSURLSession
+                    sessionWithConfiguration:[NSURLSessionConfiguration
+                                              defaultSessionConfiguration]];
+    });
+    return session;
+}
 
 // =============================================================================
 // MARK: - BugsnagConfiguration
 // =============================================================================
 
+BSG_OBJC_DIRECT_MEMBERS
 @implementation BugsnagConfiguration
-
-static NSUserDefaults *userDefaults;
-
-+ (void)initialize {
-    userDefaults = NSUserDefaults.standardUserDefaults;
-}
 
 + (instancetype _Nonnull)loadConfig {
     NSDictionary *options = [[NSBundle mainBundle] infoDictionary][@"bugsnag"];
-    return [BSGConfigurationBuilder configurationFromOptions:options];
-}
-
-+ (instancetype)loadConfigFromOptions:(NSDictionary *)options {
-    return [BSGConfigurationBuilder configurationFromOptions:options];
+    return BSGConfigurationWithOptions(options);
 }
 
 // -----------------------------------------------------------------------------
@@ -77,10 +74,13 @@ static NSUserDefaults *userDefaults;
  *
  * @param zone This parameter is ignored. Memory zones are no longer used by Objective-C.
  */
-- (nonnull id)copyWithZone:(nullable __attribute__((unused)) NSZone *)zone {
+- (nonnull id)copyWithZone:(nullable NSZone *)zone {
     BugsnagConfiguration *copy = [[BugsnagConfiguration alloc] initWithApiKey:[self.apiKey copy]];
     // Omit apiKey - it's set explicitly in the line above
+#if BSG_HAVE_APP_HANG_DETECTION
     [copy setAppHangThresholdMillis:self.appHangThresholdMillis];
+    [copy setReportBackgroundAppHangs:self.reportBackgroundAppHangs];
+#endif
     [copy setAppType:self.appType];
     [copy setAppVersion:self.appVersion];
     [copy setAutoDetectErrors:self.autoDetectErrors];
@@ -94,19 +94,27 @@ static NSUserDefaults *userDefaults;
     [copy setRedactedKeys:self.redactedKeys];
     [copy setLaunchDurationMillis:self.launchDurationMillis];
     [copy setSendLaunchCrashesSynchronously:self.sendLaunchCrashesSynchronously];
+    [copy setAttemptDeliveryOnCrash:self.attemptDeliveryOnCrash];
     [copy setMaxPersistedEvents:self.maxPersistedEvents];
     [copy setMaxPersistedSessions:self.maxPersistedSessions];
+    [copy setMaxStringValueLength:self.maxStringValueLength];
     [copy setMaxBreadcrumbs:self.maxBreadcrumbs];
+    [copy setNotifier:self.notifier];
+    [copy setFeatureFlagStore:self.featureFlagStore];
     [copy setMetadata:self.metadata];
     [copy setEndpoints:self.endpoints];
     [copy setOnCrashHandler:self.onCrashHandler];
     [copy setPersistUser:self.persistUser];
+    [copy setPlugins:[self.plugins mutableCopyWithZone:zone]];
+    // --- section added by Sketch
     [copy setExclusiveSubdirectory:[self.exclusiveSubdirectory copy]];
     [copy setSuppressNetworkOperations:self.suppressNetworkOperations];
-    [copy setPlugins:[self.plugins copy]];
+    // --- end of section added by Sketch
     [copy setReleaseStage:self.releaseStage];
     copy.session = self.session; // NSURLSession does not declare conformance to NSCopying
+#if BSG_HAVE_MACH_THREADS
     [copy setSendThreads:self.sendThreads];
+#endif
     [copy setUser:self.user.id
         withEmail:self.user.email
           andName:self.user.name];
@@ -116,6 +124,7 @@ static NSUserDefaults *userDefaults;
     [copy setOnBreadcrumbBlocks:self.onBreadcrumbBlocks];
     [copy setOnSendBlocks:self.onSendBlocks];
     [copy setOnSessionBlocks:self.onSessionBlocks];
+    [copy setTelemetry:self.telemetry];
     return copy;
 }
 
@@ -137,14 +146,6 @@ static NSUserDefaults *userDefaults;
     BOOL isHex = (NSNotFound == [[apiKey uppercaseString] rangeOfCharacterFromSet:chars].location);
 
     return isHex && [apiKey length] == BSGApiKeyLength;
-}
-
-+ (void)setUserDefaults:(NSUserDefaults *)newValue {
-    userDefaults = newValue;
-}
-
-+ (NSUserDefaults *)userDefaults {
-    return userDefaults;
 }
 
 // -----------------------------------------------------------------------------
@@ -169,10 +170,13 @@ static NSUserDefaults *userDefaults;
     if (apiKey) {
         [self setApiKey:apiKey];
     }
+    _featureFlagStore = [[BSGMemoryFeatureFlagStore alloc] init];
     _metadata = [[BugsnagMetadata alloc] init];
     _endpoints = [BugsnagEndpointConfiguration new];
     _autoDetectErrors = YES;
+#if BSG_HAVE_APP_HANG_DETECTION
     _appHangThresholdMillis = BugsnagAppHangThresholdFatalOnly;
+#endif
     _onSendBlocks = [NSMutableArray new];
     _onSessionBlocks = [NSMutableArray new];
     _onBreadcrumbBlocks = [NSMutableArray new];
@@ -182,41 +186,44 @@ static NSUserDefaults *userDefaults;
     _enabledBreadcrumbTypes = BSGEnabledBreadcrumbTypeAll;
     _launchDurationMillis = 5000;
     _sendLaunchCrashesSynchronously = YES;
-    _maxBreadcrumbs = 25;
+    _attemptDeliveryOnCrash = NO;
+    _maxBreadcrumbs = 100;
     _maxPersistedEvents = 32;
     _maxPersistedSessions = 128;
+    _maxStringValueLength = 10000;
     _autoTrackSessions = YES;
+#if BSG_HAVE_MACH_THREADS
     _sendThreads = BSGThreadSendPolicyAlways;
+#else
+    _sendThreads = BSGThreadSendPolicyNever;
+#endif
     // Default to recording all error types
     _enabledErrorTypes = [BugsnagErrorTypes new];
 
     // Enabling OOM detection only happens in release builds, to avoid triggering
     // the heuristic when killing/restarting an app in Xcode or similar.
     _persistUser = YES;
-    // Only gets persisted user data if there is any, otherwise nil
     // persistUser isn't settable until post-init.
-    _user = [self getPersistedUserData];
+    _user = BSGGetPersistedUser();
 
-    if ([NSURLSession class]) {
-        _session = [NSURLSession
-            sessionWithConfiguration:[NSURLSessionConfiguration
-                                         defaultSessionConfiguration]];
-    }
+    _telemetry = BSGTelemetryAll;
     
     NSString *releaseStage = nil;
-    #if DEBUG
+    #if defined(DEBUG) && DEBUG
         releaseStage = BSGKeyDevelopment;
     #else
         releaseStage = BSGKeyProduction;
     #endif
 
     NSString *appType = nil;
-    #if BSG_PLATFORM_TVOS
+    #if TARGET_OS_TV
         appType = @"tvOS";
-    #elif BSG_PLATFORM_IOS
+    #elif TARGET_OS_IOS
         appType = @"iOS";
-    #elif BSG_PLATFORM_OSX
+    #elif TARGET_OS_OSX
         appType = @"macOS";
+    #elif TARGET_OS_WATCH
+        appType = @"watchOS";
     #else
         appType = @"unknown";
     #endif
@@ -238,6 +245,7 @@ static NSUserDefaults *userDefaults;
     _bundleVersion = dictionaryRepresentation[BSGKeyBundleVersion];
     _context = dictionaryRepresentation[BSGKeyContext];
     _enabledReleaseStages = dictionaryRepresentation[BSGKeyEnabledReleaseStages];
+    _featureFlagStore = [[BSGMemoryFeatureFlagStore alloc] init];
     _releaseStage = dictionaryRepresentation[BSGKeyReleaseStage];
     return self;
 }
@@ -267,59 +275,88 @@ static NSUserDefaults *userDefaults;
            [self.enabledReleaseStages containsObject:self.releaseStage ?: @""];
 }
 
-- (void)setUser:(NSString *_Nullable)userId
-      withEmail:(NSString *_Nullable)email
-        andName:(NSString *_Nullable)name {
-    self.user = [[BugsnagUser alloc] initWithUserId:userId name:name emailAddress:email];
-
+- (void)setUser:(NSString *)userId withEmail:(NSString *)email andName:(NSString *)name {
+    BugsnagUser *user = [[BugsnagUser alloc] initWithId:userId name:name emailAddress:email]; 
+    self.user = user;
     if (self.persistUser) {
-        [self persistUserData];
+        BSGSetPersistedUser(user);
     }
+}
+
+- (NSURLSession *)sessionOrDefault {
+    NSURLSession *session = self.session;
+    return session ? session : getConfigDefaultURLSession();
 }
 
 // =============================================================================
 // MARK: - onSendBlock
 // =============================================================================
 
-- (void)addOnSendErrorBlock:(BugsnagOnSendErrorBlock _Nonnull)block {
-    [(NSMutableArray *)self.onSendBlocks addObject:[block copy]];
+- (BugsnagOnSendErrorRef)addOnSendErrorBlock:(BugsnagOnSendErrorBlock)block {
+    BugsnagOnSendErrorBlock callback = [block copy];
+    [self.onSendBlocks addObject:callback];
+    return callback;
 }
 
-- (void)removeOnSendErrorBlock:(BugsnagOnSendErrorBlock _Nonnull )block
-{
-    [(NSMutableArray *)self.onSendBlocks removeObject:block];
+- (void)removeOnSendError:(BugsnagOnSendErrorRef)callback {
+    if (![callback isKindOfClass:NSClassFromString(@"NSBlock")]) {
+        bsg_log_err(@"Invalid object type passed to %@", NSStringFromSelector(_cmd));
+        return;
+    }
+    [self.onSendBlocks removeObject:(id)callback];
+}
+
+- (void)removeOnSendErrorBlock:(BugsnagOnSendErrorBlock)block {
+    [self.onSendBlocks removeObject:block];
 }
 
 // =============================================================================
 // MARK: - onSessionBlock
 // =============================================================================
 
-- (void)addOnSessionBlock:(BugsnagOnSessionBlock)block {
-    [(NSMutableArray *)self.onSessionBlocks addObject:[block copy]];
+- (BugsnagOnSessionRef)addOnSessionBlock:(BugsnagOnSessionBlock)block {
+    BugsnagOnSessionBlock callback = [block copy];
+    [self.onSessionBlocks addObject:callback];
+    return callback;
+}
+
+- (void)removeOnSession:(BugsnagOnSessionRef)callback {
+    if (![callback isKindOfClass:NSClassFromString(@"NSBlock")]) {
+        bsg_log_err(@"Invalid object type passed to %@", NSStringFromSelector(_cmd));
+        return;
+    }
+    [self.onSessionBlocks removeObject:(id)callback];
 }
 
 - (void)removeOnSessionBlock:(BugsnagOnSessionBlock)block {
-    [(NSMutableArray *)self.onSessionBlocks removeObject:block];
+    [self.onSessionBlocks removeObject:block];
 }
 
 // =============================================================================
 // MARK: - onBreadcrumbBlock
 // =============================================================================
 
-- (void)addOnBreadcrumbBlock:(BugsnagOnBreadcrumbBlock _Nonnull)block {
-    [(NSMutableArray *)self.onBreadcrumbBlocks addObject:[block copy]];
+- (BugsnagOnBreadcrumbRef)addOnBreadcrumbBlock:(BugsnagOnBreadcrumbBlock)block {
+    BugsnagOnBreadcrumbBlock callback = [block copy];
+    [self.onBreadcrumbBlocks addObject:callback];
+    return callback;
 }
 
-- (void)removeOnBreadcrumbBlock:(BugsnagOnBreadcrumbBlock _Nonnull)block {
-    [(NSMutableArray *)self.onBreadcrumbBlocks removeObject:block];
+- (void)removeOnBreadcrumb:(BugsnagOnBreadcrumbRef)callback {
+    if (![callback isKindOfClass:NSClassFromString(@"NSBlock")]) {
+        bsg_log_err(@"Invalid object type passed to %@", NSStringFromSelector(_cmd));
+        return;
+    }
+    [self.onBreadcrumbBlocks removeObject:(id)callback];
 }
 
-- (NSDictionary *)sessionApiHeaders {
-    return @{BugsnagHTTPHeaderNameApiKey: self.apiKey ?: @"",
-             BugsnagHTTPHeaderNamePayloadVersion: @"1.0",
-             BugsnagHTTPHeaderNameSentAt: [BSG_RFC3339DateTool stringFromDate:[NSDate date]]
-    };
+- (void)removeOnBreadcrumbBlock:(BugsnagOnBreadcrumbBlock)block {
+    [self.onBreadcrumbBlocks removeObject:block];
 }
+
+// =============================================================================
+// MARK: -
+// =============================================================================
 
 - (void)setEndpoints:(BugsnagEndpointConfiguration *)endpoints {
     if ([self isValidURLString:endpoints.notify]) {
@@ -344,86 +381,9 @@ static NSUserDefaults *userDefaults;
 
 // MARK: - User Persistence
 
-@synthesize persistUser = _persistUser;
-
-- (BOOL)persistUser {
-    @synchronized (self) {
-        return _persistUser;
-    }
-}
-
 - (void)setPersistUser:(BOOL)persistUser {
-    @synchronized (self) {
-        _persistUser = persistUser;
-        if (persistUser) {
-            [self persistUserData];
-        }
-        else {
-            [self deletePersistedUserData];
-        }
-    }
-}
-
-/**
- * Retrieve a persisted user, if we have any valid, persisted fields, or nil otherwise
- */
-- (BugsnagUser *)getPersistedUserData {
-    @synchronized(self) {
-        NSString *email = [userDefaults objectForKey:kBugsnagUserEmailAddress];
-        NSString *name = [userDefaults objectForKey:kBugsnagUserName];
-        NSString *userId = [userDefaults objectForKey:kBugsnagUserUserId];
-
-        if (email || name || userId) {
-            return [[BugsnagUser alloc] initWithUserId:userId name:name emailAddress:email];
-        } else {
-            return [[BugsnagUser alloc] initWithUserId:nil name:nil emailAddress:nil];
-        }
-    }
-}
-
-/**
- * Store user data in a secure location (i.e. the keychain) that persists between application runs
- * 'storing' nil values deletes them.
- */
-- (void)persistUserData {
-    @synchronized(self) {
-        if (self.user) {
-            // Email
-            if (self.user.email) {
-                [userDefaults setObject:self.user.email forKey:kBugsnagUserEmailAddress];
-            }
-            else {
-                [userDefaults removeObjectForKey:kBugsnagUserEmailAddress];
-            }
-
-            // Name
-            if (self.user.name) {
-                [userDefaults setObject:self.user.name forKey:kBugsnagUserName];
-            }
-            else {
-                [userDefaults removeObjectForKey:kBugsnagUserName];
-            }
-
-            // UserId
-            if (self.user.id) {
-                [userDefaults setObject:self.user.id forKey:kBugsnagUserUserId];
-            }
-            else {
-                [userDefaults removeObjectForKey:kBugsnagUserUserId];
-            }
-        }
-    }
-}
-
-/**
- * Delete any persisted user data
- */
--(void)deletePersistedUserData {
-    @synchronized(self) {
-        [userDefaults removeObjectForKey:kBugsnagUserEmailAddress];
-        [userDefaults removeObjectForKey:kBugsnagUserName];
-        [userDefaults removeObjectForKey:kBugsnagUserUserId];
-    }
+    _persistUser = persistUser;
+    BSGSetPersistedUser(persistUser ? self.user : nil);
 }
 
 // -----------------------------------------------------------------------------
@@ -441,47 +401,36 @@ static NSUserDefaults *userDefaults;
 }
 
 - (void)setMaxPersistedEvents:(NSUInteger)maxPersistedEvents {
-    @synchronized (self) {
-        if (maxPersistedEvents >= 1) {
-            _maxPersistedEvents = maxPersistedEvents;
-        } else {
-            bsg_log_err(@"Invalid configuration value detected. Option maxPersistedEvents "
-                        "should be a non-zero integer. Supplied value is %lu",
-                        (unsigned long) maxPersistedEvents);
-        }
+    if (maxPersistedEvents >= 1) {
+        _maxPersistedEvents = maxPersistedEvents;
+    } else {
+        bsg_log_err(@"Invalid configuration value detected. Option maxPersistedEvents "
+                    "should be a non-zero integer. Supplied value is %lu",
+                    (unsigned long)maxPersistedEvents);
     }
 }
 
 - (void)setMaxPersistedSessions:(NSUInteger)maxPersistedSessions {
-    @synchronized (self) {
-        if (maxPersistedSessions >= 1) {
-            _maxPersistedSessions = maxPersistedSessions;
-        } else {
-            bsg_log_err(@"Invalid configuration value detected. Option maxPersistedSessions "
-                        "should be a non-zero integer. Supplied value is %lu",
-                        (unsigned long) maxPersistedSessions);
-        }
+    if (maxPersistedSessions >= 1) {
+        _maxPersistedSessions = maxPersistedSessions;
+    } else {
+        bsg_log_err(@"Invalid configuration value detected. Option maxPersistedSessions "
+                    "should be a non-zero integer. Supplied value is %lu",
+                    (unsigned long)maxPersistedSessions);
     }
 }
 
-@synthesize maxBreadcrumbs = _maxBreadcrumbs;
-
-- (NSUInteger)maxBreadcrumbs {
-    @synchronized (self) {
-        return _maxBreadcrumbs;
+- (void)setMaxBreadcrumbs:(NSUInteger)newValue {
+    static const NSUInteger maxAllowed = 500;
+    if (newValue > maxAllowed) {
+        bsg_log_err(@"Invalid configuration value detected. "
+                    "Option maxBreadcrumbs should be an integer between 0-%lu. "
+                    "Supplied value is %lu",
+                    (unsigned long)maxAllowed,
+                    (unsigned long)newValue);
+        return;
     }
-}
-
-- (void)setMaxBreadcrumbs:(NSUInteger)maxBreadcrumbs {
-    @synchronized (self) {
-        if (maxBreadcrumbs <= 100) {
-            _maxBreadcrumbs = maxBreadcrumbs;
-        } else {
-            bsg_log_err(@"Invalid configuration value detected. Option maxBreadcrumbs "
-                        "should be an integer between 0-100. Supplied value is %lu",
-                        (unsigned long) maxBreadcrumbs);
-        }
-    }
+    _maxBreadcrumbs = newValue;
 }
 
 - (NSURL *)notifyURL {
@@ -541,22 +490,6 @@ static NSUserDefaults *userDefaults;
     return NO;
 }
 
-// MARK: - enabledBreadcrumbTypes
-
-@synthesize enabledBreadcrumbTypes = _enabledBreadcrumbTypes;
-
-- (BSGEnabledBreadcrumbType)enabledBreadcrumbTypes {
-    @synchronized (self) {
-        return _enabledBreadcrumbTypes;
-    }
-}
-
-- (void)setEnabledBreadcrumbTypes:(BSGEnabledBreadcrumbType)enabledBreadcrumbTypes {
-    @synchronized (self) {
-        _enabledBreadcrumbTypes = enabledBreadcrumbTypes;
-    }
-}
-
 // MARK: -
 
 - (void)validate {
@@ -574,6 +507,28 @@ static NSUserDefaults *userDefaults;
 
 - (void)addPlugin:(id<BugsnagPlugin> _Nonnull)plugin {
     [self.plugins addObject:plugin];
+}
+
+// MARK: - <BugsnagFeatureFlagStore>
+
+- (void)addFeatureFlagWithName:(NSString *)name variant:(nullable NSString *)variant {
+    [self.featureFlagStore addFeatureFlag:name withVariant:variant];
+}
+
+- (void)addFeatureFlagWithName:(NSString *)name {
+    [self.featureFlagStore addFeatureFlag:name withVariant:nil];
+}
+
+- (void)addFeatureFlags:(NSArray<BugsnagFeatureFlag *> *)featureFlags {
+    [self.featureFlagStore addFeatureFlags:featureFlags];
+}
+
+- (void)clearFeatureFlagWithName:(NSString *)name {
+    [self.featureFlagStore clear:name];
+}
+
+- (void)clearFeatureFlags {
+    [self.featureFlagStore clear];
 }
 
 // MARK: - <MetadataStore>

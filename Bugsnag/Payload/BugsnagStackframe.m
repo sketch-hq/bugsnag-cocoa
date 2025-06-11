@@ -8,10 +8,12 @@
 
 #import "BugsnagStackframe+Private.h"
 
+#import "BSGKeys.h"
 #import "BSG_KSBacktrace.h"
-#import "BSG_KSDynamicLinker.h"
+#import "BSG_KSCrashReportFields.h"
+#import "BSG_KSMachHeaders.h"
+#import "BSG_Symbolicate.h"
 #import "BugsnagCollections.h"
-#import "BugsnagKeys.h"
 #import "BugsnagLogger.h"
 
 BugsnagStackframeType const BugsnagStackframeTypeCocoa = @"cocoa";
@@ -24,11 +26,12 @@ static NSString * _Nullable FormatMemoryAddress(NSNumber * _Nullable address) {
 
 // MARK: -
 
+BSG_OBJC_DIRECT_MEMBERS
 @implementation BugsnagStackframe
 
-+ (NSDictionary *_Nullable)findImageAddr:(unsigned long)addr inImages:(NSArray *)images {
+static NSDictionary * _Nullable FindImage(NSArray *images, uintptr_t addr) {
     for (NSDictionary *image in images) {
-        if ([(NSNumber *)image[BSGKeyImageAddress] unsignedLongValue] == addr) {
+        if ([(NSNumber *)image[@ BSG_KSCrashField_ImageAddress] unsignedLongValue] == addr) {
             return image;
         }
     }
@@ -47,6 +50,7 @@ static NSString * _Nullable FormatMemoryAddress(NSNumber * _Nullable address) {
     frame.symbolAddress = [self readInt:json key:BSGKeySymbolAddr];
     frame.machoLoadAddress = [self readInt:json key:BSGKeyMachoLoadAddr];
     frame.type = BSGDeserializeString(json[BSGKeyType]);
+    frame.codeIdentifier = BSGDeserializeString(json[@"codeIdentifier"]);
     frame.columnNumber = BSGDeserializeNumber(json[@"columnNumber"]);
     frame.file = BSGDeserializeString(json[@"file"]);
     frame.inProject = BSGDeserializeNumber(json[@"inProject"]);
@@ -62,27 +66,41 @@ static NSString * _Nullable FormatMemoryAddress(NSNumber * _Nullable address) {
     return nil;
 }
 
-+ (BugsnagStackframe *)frameFromDict:(NSDictionary *)dict
-                          withImages:(NSArray *)binaryImages {
++ (instancetype)frameFromDict:(NSDictionary<NSString *, id> *)dict withImages:(NSArray<NSDictionary<NSString *, id> *> *)binaryImages {
+    NSNumber *frameAddress = dict[@ BSG_KSCrashField_InstructionAddr];
+    if (frameAddress.unsignedLongLongValue == 1) {
+        // We sometimes get a frame address of 0x1 at the bottom of the call stack.
+        // It's not a valid stack frame and causes E2E tests to fail, so should be ignored.
+        return nil;
+    }
+
     BugsnagStackframe *frame = [BugsnagStackframe new];
-    frame.frameAddress = dict[BSGKeyInstructionAddress];
-    frame.symbolAddress = dict[BSGKeySymbolAddress];
-    frame.machoLoadAddress = dict[BSGKeyObjectAddress];
-    frame.machoFile = dict[BSGKeyObjectName];
-    frame.method = dict[BSGKeySymbolName];
+    frame.frameAddress = frameAddress;
+    frame.machoFile = dict[@ BSG_KSCrashField_ObjectName]; // last path component
+    frame.machoLoadAddress = dict[@ BSG_KSCrashField_ObjectAddr];
+    frame.method = dict[@ BSG_KSCrashField_SymbolName];
+    frame.symbolAddress = dict[@ BSG_KSCrashField_SymbolAddr];
     frame.isPc = [dict[BSGKeyIsPC] boolValue];
     frame.isLr = [dict[BSGKeyIsLR] boolValue];
 
-    NSDictionary *image = [self findImageAddr:[frame.machoLoadAddress unsignedLongValue] inImages:binaryImages];
-
+    NSDictionary *image = FindImage(binaryImages, (uintptr_t)frame.machoLoadAddress.unsignedLongLongValue);
     if (image != nil) {
-        frame.machoUuid = image[BSGKeyUuid];
-        frame.machoVmAddress = image[BSGKeyImageVmAddress];
-        frame.machoFile = image[BSGKeyName];
-        return frame;
-    } else { // invalid frame, skip
+        frame.machoFile = image[@ BSG_KSCrashField_Name]; // full path
+        frame.machoUuid = image[@ BSG_KSCrashField_UUID];
+        frame.machoVmAddress = image[@ BSG_KSCrashField_ImageVmAddress];
+    } else if (frame.isPc) {
+        // If the program counter's value isn't in any known image, the crash may have been due to a bad function pointer.
+        // Ignore these frames to prevent the dashboard grouping on the address.
         return nil;
+    } else if (frame.isLr) {
+        // Ignore invalid link register frames.
+        // For EXC_BREAKPOINT mach exceptions the link register does not contain an instruction address.
+        return nil;
+    } else if (/* Don't warn for recrash reports */ binaryImages.count > 1) {
+        bsg_log_warn(@"BugsnagStackframe: no image found for address %@", FormatMemoryAddress(frame.machoLoadAddress));
     }
+    
+    return frame;
 }
 
 + (NSArray<BugsnagStackframe *> *)stackframesWithBacktrace:(uintptr_t *)backtrace length:(NSUInteger)length {
@@ -96,7 +114,7 @@ static NSString * _Nullable FormatMemoryAddress(NSNumber * _Nullable address) {
             continue;
         }
         
-        [frames addObject:[[BugsnagStackframe alloc] initWithAddress:address isPc:i == 0]];
+        [frames addObject:[[BugsnagStackframe alloc] initWithAddress:address]];
     }
     
     return frames;
@@ -140,7 +158,6 @@ static NSString * _Nullable FormatMemoryAddress(NSNumber * _Nullable address) {
         if (match.numberOfRanges != 6) {
             continue;
         }
-        NSString *frameNumber = [string substringWithRange:[match rangeAtIndex:1]];
         NSString *imageName = [string substringWithRange:[match rangeAtIndex:2]];
         NSString *frameAddress = [string substringWithRange:[match rangeAtIndex:3]];
         NSRange symbolNameRange = [match rangeAtIndex:5];
@@ -154,7 +171,7 @@ static NSString * _Nullable FormatMemoryAddress(NSNumber * _Nullable address) {
             sscanf(frameAddress.UTF8String, "%lx", &address);
         }
         
-        BugsnagStackframe *frame = [[BugsnagStackframe alloc] initWithAddress:address isPc:[frameNumber isEqualToString:@"0"]];
+        BugsnagStackframe *frame = [[BugsnagStackframe alloc] initWithAddress:address];
         frame.machoFile = imageName;
         frame.method = symbolName ?: frameAddress;
         [frames addObject:frame];
@@ -163,10 +180,9 @@ static NSString * _Nullable FormatMemoryAddress(NSNumber * _Nullable address) {
     return [NSArray arrayWithArray:frames];
 }
 
-- (instancetype)initWithAddress:(uintptr_t)address isPc:(BOOL)isPc {
+- (instancetype)initWithAddress:(uintptr_t)address {
     if ((self = [super init])) {
         _frameAddress = @(address);
-        _isPc = isPc;
         _needsSymbolication = YES;
         BSG_Mach_Header_Info *header = bsg_mach_headers_image_at_address(address);
         if (header) {
@@ -179,33 +195,22 @@ static NSString * _Nullable FormatMemoryAddress(NSNumber * _Nullable address) {
     return self;
 }
 
-- (NSString *)description {
-    return [NSString stringWithFormat:@"<BugsnagStackframe: %p { %@ %p %@ }>", (void *)self,
-            self.machoFile.lastPathComponent, (void *)self.frameAddress.unsignedLongLongValue, self.method];
-}
-
 - (void)symbolicateIfNeeded {
     if (!self.needsSymbolication) {
         return;
     }
     self.needsSymbolication = NO;
     
-    Dl_info info = {0};
-    if (!dladdr((const void *)self.frameAddress.unsignedIntegerValue, &info)) {
-        return;
+    uintptr_t frameAddress = self.frameAddress.unsignedIntegerValue;
+    uintptr_t instructionAddress = self.isPc ? frameAddress: CALL_INSTRUCTION_FROM_RETURN_ADDRESS(frameAddress);
+    struct bsg_symbolicate_result result;
+    bsg_symbolicate(instructionAddress, &result);
+    
+    if (result.function_address) {
+        self.symbolAddress = @(result.function_address);
     }
-    if (info.dli_sname) {
-        self.method = @(info.dli_sname);
-    }
-    if (info.dli_saddr) {
-        self.symbolAddress = @((uintptr_t)info.dli_saddr);
-    }
-    // Just in case these were not found via bsg_mach_headers_image_at_address()
-    if (info.dli_fname && !self.machoFile) {
-        self.machoFile = @(info.dli_fname);
-    }
-    if (info.dli_fbase && self.machoLoadAddress == nil) {
-        self.machoLoadAddress = @((uintptr_t)info.dli_fbase);
+    if (result.function_name) {
+        self.method = @(result.function_name);
     }
 }
 
@@ -218,13 +223,10 @@ static NSString * _Nullable FormatMemoryAddress(NSNumber * _Nullable address) {
     dict[BSGKeySymbolAddr] = FormatMemoryAddress(self.symbolAddress);
     dict[BSGKeyMachoLoadAddr] = FormatMemoryAddress(self.machoLoadAddress);
     dict[BSGKeyMachoVMAddress] = FormatMemoryAddress(self.machoVmAddress);
-    if (self.isPc) {
-        dict[BSGKeyIsPC] = @(self.isPc);
-    }
-    if (self.isLr) {
-        dict[BSGKeyIsLR] = @(self.isLr);
-    }
+    dict[BSGKeyIsPC] = self.isPc ? @YES : nil;
+    dict[BSGKeyIsLR] = self.isLr ? @YES : nil;
     dict[BSGKeyType] = self.type;
+    dict[@"codeIdentifier"] = self.codeIdentifier;
     dict[@"columnNumber"] = self.columnNumber;
     dict[@"file"] = self.file;
     dict[@"inProject"] = self.inProject;

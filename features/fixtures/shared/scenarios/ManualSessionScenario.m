@@ -3,18 +3,20 @@
 // Copyright (c) 2018 Bugsnag. All rights reserved.
 //
 
-#import "ManualSessionScenario.h"
-#import <Bugsnag/Bugsnag.h>
+#import "Scenario.h"
+#import "Logging.h"
 
-@interface BugsnagConfiguration ()
-- (void)deletePersistedUserData;
+/**
+ * Sends a manual session payload to Bugsnag.
+ */
+@interface ManualSessionScenario : Scenario
 @end
 
 @implementation ManualSessionScenario
 
-- (void)startBugsnag {
+- (void)configure {
+    [super configure];
     self.config.autoTrackSessions = NO;
-    [super startBugsnag];
 }
 
 - (void)run {

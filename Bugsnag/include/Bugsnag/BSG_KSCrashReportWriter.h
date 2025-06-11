@@ -31,12 +31,12 @@
 #ifndef HDR_BSG_KSCrashReportWriter_h
 #define HDR_BSG_KSCrashReportWriter_h
 
+#include <stdbool.h>
+#include <sys/types.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include <stdbool.h>
-#include <sys/types.h>
 
 /**
  * Encapsulates report writing functionality.
@@ -229,10 +229,7 @@ typedef struct BSG_KSCrashReportWriter {
 } BSG_KSCrashReportWriter;
 
 typedef void (*BSG_KSReportWriteCallback)(
-    const BSG_KSCrashReportWriter *writer);
-
-typedef void (*BSGReportCallback)(
-        const BSG_KSCrashReportWriter *writer, int type);
+    const BSG_KSCrashReportWriter *writer, bool requiresAsyncSafety);
 
 #ifdef __cplusplus
 }

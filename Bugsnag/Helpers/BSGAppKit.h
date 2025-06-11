@@ -6,6 +6,8 @@
 //  Copyright © 2021 Bugsnag Inc. All rights reserved.
 //
 
+#if __has_include(<AppKit/AppKit.h>)
+
 #import <AppKit/AppKit.h>
 
 // Daemons and other processes running in non-UI sessions should not link against AppKit.
@@ -15,6 +17,7 @@
 #define NSAPPLICATION                                       NSClassFromString(@"NSApplication")
 #define NSMENUITEM                                          NSClassFromString(@"NSMenuItem")
 #define NSWORKSPACE                                         NSClassFromString(@"NSWorkspace")
+#define NSWINDOW                                            NSClassFromString(@"NSWindow")
 
 #define NSApplicationDidBecomeActiveNotification            @"NSApplicationDidBecomeActiveNotification"
 #define NSApplicationDidFinishLaunchingNotification         @"NSApplicationDidFinishLaunchingNotification"
@@ -36,3 +39,5 @@
 #define NSWindowWillMiniaturizeNotification                 @"NSWindowWillMiniaturizeNotification"
 #define NSWorkspaceScreensDidSleepNotification              @"NSWorkspaceScreensDidSleepNotification"
 #define NSWorkspaceScreensDidWakeNotification               @"NSWorkspaceScreensDidWakeNotification"
+
+#endif

@@ -3,17 +3,22 @@
 // Copyright (c) 2018 Bugsnag. All rights reserved.
 //
 
-#import "BuiltinTrapScenario.h"
-#include "spin_malloc.h"
+#import "Scenario.h"
+#import "Logging.h"
+
+#import "spin_malloc.h"
 
 /**
  * Calls __builtin_trap
  */
+@interface BuiltinTrapScenario : Scenario
+@end
+
 @implementation BuiltinTrapScenario
 
-- (void)startBugsnag {
+- (void)configure {
+    [super configure];
     self.config.autoTrackSessions = NO;
-    [super startBugsnag];
 }
 
 

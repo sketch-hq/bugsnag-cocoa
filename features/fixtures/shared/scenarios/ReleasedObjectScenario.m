@@ -24,22 +24,27 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#import "ReleasedObjectScenario.h"
+#import "Scenario.h"
+#import "Logging.h"
+
 #import <objc/message.h>
 
 /**
  * Send a message to an object whose memory has already been freed.
  */
+@interface ReleasedObjectScenario : Scenario
+@end
+
 @implementation ReleasedObjectScenario
 
 - (NSString *)category { return @"Objective-C"; }
 - (NSString *)title { return @"Message a released object"; }
 - (NSString *)desc { return @""; }
-- (void)startBugsnag {
-    self.config.autoTrackSessions = NO;
-    [super startBugsnag];
-}
 
+- (void)configure {
+    [super configure];
+    self.config.autoTrackSessions = NO;
+}
 
 - (void)run
 {

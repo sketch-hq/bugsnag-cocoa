@@ -30,13 +30,18 @@
 #ifndef HDR_BSG_KSCrashC_h
 #define HDR_BSG_KSCrashC_h
 
+#include "BSG_KSCrashContext.h"
+
+#include <stdbool.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#include "BSG_KSCrashContext.h"
-
-#include <stdbool.h>
+/** Initialize the KSCrash system. Call this once, before any other function.
+ * Note: This gets called automatically by [BSG_KSCrash sharedInstance].
+ */
+void bsg_kscrash_init(void);
 
 /** Install the crash reporter. The reporter will record the next crash and then
  * terminate the program.
@@ -87,28 +92,6 @@ void bsg_kscrash_reinstall(const char *const crashReportFilePath,
                            const char *const stateFilePath,
                            const char *const crashID);
 
-/** Set the user-supplied data in JSON format.
- *
- * @param userInfoJSON Pre-baked JSON containing user-supplied information.
- *                     NULL = delete.
- */
-void bsg_kscrash_setUserInfoJSON(const char *const userInfoJSON);
-
-/** Set whether or not to print a stack trace to stdout when a crash occurs.
- *
- * Default: false
- */
-void bsg_kscrash_setPrintTraceToStdout(bool printTraceToStdout);
-
-/** If true, introspect memory contents during a crash.
- * Any Objective-C objects or C strings near the stack pointer or referenced by
- * cpu registers or exceptions will be recorded in the crash report, along with
- * their contents.
- *
- * Default: false
- */
-void bsg_kscrash_setIntrospectMemory(bool introspectMemory);
-
 /** Set the callback to invoke upon a crash.
  *
  * WARNING: Only call async-safe functions from this function! DO NOT call
@@ -121,14 +104,7 @@ void bsg_kscrash_setIntrospectMemory(bool introspectMemory);
  * Default: NULL
  */
 void bsg_kscrash_setCrashNotifyCallback(
-    const BSGReportCallback onCrashNotify);
-
-/** If YES, user reported exceptions even if a debugger is attached
- *
- * Default: NO
- */
-void bsg_kscrash_setReportWhenDebuggerIsAttached(
-    bool reportWhenDebuggerIsAttached);
+    const BSG_KSReportWriteCallback onCrashNotify);
 
 void bsg_kscrash_setThreadTracingEnabled(bool threadTracingEnabled);
 

@@ -6,10 +6,14 @@
 //  Copyright © 2020 Bugsnag Inc. All rights reserved.
 //
 
-#import <Bugsnag/BugsnagConfiguration.h>
+#import "BSGDefines.h"
+#import "BugsnagInternals.h"
+
+@class BugsnagNotifier;
 
 NS_ASSUME_NONNULL_BEGIN
 
+BSG_OBJC_DIRECT_MEMBERS
 @interface BugsnagConfiguration ()
 
 #pragma mark Initializers
@@ -18,27 +22,19 @@ NS_ASSUME_NONNULL_BEGIN
 
 #pragma mark Properties
 
-/// The user defaults database to use for persistence of user information.
-@property (class, nonatomic) NSUserDefaults *userDefaults;
-
 @property (readonly, nonatomic) NSDictionary<NSString *, id> *dictionaryRepresentation;
+
+@property (nonatomic) BSGMemoryFeatureFlagStore *featureFlagStore;
 
 @property (copy, nonatomic) BugsnagMetadata *metadata;
 
 @property (readonly, nullable, nonatomic) NSURL *notifyURL;
 
-@property (nonatomic) NSMutableArray<BugsnagOnBreadcrumbBlock> *onBreadcrumbBlocks;
-
-@property (nonatomic) NSMutableArray<BugsnagOnSendErrorBlock> *onSendBlocks;
-
-/// Hooks for modifying sessions before they are sent to Bugsnag. Intended for internal use only by React Native/Unity.
-@property (nonatomic) NSMutableArray<BugsnagOnSessionBlock> *onSessionBlocks;
-
 @property (nonatomic) NSMutableSet *plugins;
 
 @property (readonly, nonatomic) BOOL shouldSendReports;
 
-@property (readonly, nonatomic) NSDictionary<NSString *, id> *sessionApiHeaders;
+@property (readonly, nonnull, nonatomic) NSURLSession *sessionOrDefault;
 
 @property (readonly, nullable, nonatomic) NSURL *sessionURL;
 
@@ -48,8 +44,6 @@ NS_ASSUME_NONNULL_BEGIN
 
 + (BOOL)isValidApiKey:(NSString *)apiKey;
 
-- (void)deletePersistedUserData;
-
 - (BOOL)shouldDiscardErrorClass:(NSString *)errorClass;
 
 - (BOOL)shouldRecordBreadcrumbType:(BSGBreadcrumbType)breadcrumbType;
@@ -58,6 +52,9 @@ NS_ASSUME_NONNULL_BEGIN
 /// Logs a warning message if the API key is not in the expected format.
 - (void)validate;
 
+@end
+
+@interface BugsnagConfiguration (/* not objc_direct */) <NSCopying>
 @end
 
 NS_ASSUME_NONNULL_END

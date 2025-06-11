@@ -33,7 +33,7 @@ CLANG_WARN_UNREACHABLE_CODE                            = YES // -Wunreachable-co
 GCC_TREAT_IMPLICIT_FUNCTION_DECLARATIONS_AS_ERRORS     = YES
 GCC_TREAT_INCOMPATIBLE_POINTER_TYPE_WARNINGS_AS_ERRORS = YES // -Wincompatible-pointer-types
 GCC_WARN_64_TO_32_BIT_CONVERSION                       = YES // -Wshorten-64-to-32
-GCC_WARN_ABOUT_DEPRECATED_FUNCTIONS                    = NO  // -Wdeprecated-declarations
+GCC_WARN_ABOUT_DEPRECATED_FUNCTIONS                    = YES // -Wdeprecated-declarations
 GCC_WARN_ABOUT_MISSING_FIELD_INITIALIZERS              = NO  // -Wmissing-field-initializers
 GCC_WARN_ABOUT_MISSING_NEWLINE                         = YES // -Wnewline-eof
 GCC_WARN_ABOUT_MISSING_PROTOTYPES                      = NO  // -Wmissing-prototypes
@@ -69,7 +69,7 @@ GCC_WARN_NON_VIRTUAL_DESTRUCTOR                        = YES // -Wnon-virtual-dt
 
 // Apple Clang - Warnings - Objective-C
 
-CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS             = NO  // -Wdeprecated-implementations
+CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS             = YES // -Wdeprecated-implementations
 CLANG_WARN_DIRECT_OBJC_ISA_USAGE                       = YES // -Wdeprecated-objc-isa-usage
 CLANG_WARN_MISSING_NOESCAPE                            = YES // -Wmissing-noescape
 CLANG_WARN_OBJC_IMPLICIT_ATOMIC_PROPERTIES             = YES // -Wimplicit-atomic-properties
@@ -89,9 +89,20 @@ CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF                   = YES // -Wimplicit-retai
 CLANG_WARN_OBJC_REPEATED_USE_OF_WEAK                   = YES // -Warc-repeated-use-of-weak -Wno-arc-maybe-repeated-use-of-weak
 CLANG_WARN__ARC_BRIDGE_CAST_NONARC                     = YES // -Warc-bridge-casts-disallowed-in-nonarc
 
+// Static Analysis - Issues - Security
+
+CLANG_ANALYZER_SECURITY_FLOATLOOPCOUNTER               = YES
+CLANG_ANALYZER_SECURITY_INSECUREAPI_RAND               = YES 
+CLANG_ANALYZER_SECURITY_INSECUREAPI_STRCPY             = YES
+
+// Static Analysis - Issues - Unused Code
+
+CLANG_TIDY_BUGPRONE_REDUNDANT_BRANCH_CONDITION         = YES
+CLANG_TIDY_MISC_REDUNDANT_EXPRESSION                   = YES
+
 // Warning flags that have no dedicated Xcode build settings
 
-WARNING_CFLAGS = -Wcast-qual -Wconditional-uninitialized -Wcustom-atomic-properties -Wdirect-ivar-access -Wdocumentation-unknown-command -Wformat-nonliteral -Widiomatic-parentheses -Wimplicit-int-float-conversion -Wimport-preprocessor-directive-pedantic -Wincomplete-implementation -Wmissing-variable-declarations -Wno-unknown-warning-option -Wnonportable-include-path -Wnullable-to-nonnull-conversion -Woverriding-method-mismatch -Wpointer-sign -Wswitch-enum -Wunused-macros
+WARNING_CFLAGS = -Wcast-qual -Wconditional-uninitialized -Wcustom-atomic-properties -Wdirect-ivar-access -Wdocumentation-unknown-command -Wformat-nonliteral -Widiomatic-parentheses -Wimplicit-int-float-conversion -Wimport-preprocessor-directive-pedantic -Wincomplete-implementation -Wmissing-variable-declarations -Wno-unknown-warning-option -Wnonportable-include-path -Wnullable-to-nonnull-conversion -Woverriding-method-mismatch -Wpointer-sign -Wswitch-enum -Wundef -Wunused-macros
 
 // Some flags that were considered and rejected:
 //

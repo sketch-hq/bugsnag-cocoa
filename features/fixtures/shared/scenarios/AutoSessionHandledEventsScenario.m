@@ -6,7 +6,11 @@
 //  Copyright © 2018 Bugsnag. All rights reserved.
 //
 
-#import "AutoSessionHandledEventsScenario.h"
+#import "Scenario.h"
+#import "Logging.h"
+
+@interface AutoSessionHandledEventsScenario : Scenario
+@end
 
 @implementation AutoSessionHandledEventsScenario
 

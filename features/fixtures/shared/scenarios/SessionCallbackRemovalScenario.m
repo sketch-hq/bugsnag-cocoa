@@ -6,14 +6,16 @@
 //  Copyright © 2020 Bugsnag. All rights reserved.
 //
 
-#import "SessionCallbackRemovalScenario.h"
+#import "Scenario.h"
+#import "Logging.h"
 
-#import <Bugsnag/Bugsnag.h>
-
+@interface SessionCallbackRemovalScenario : Scenario
+@end
 
 @implementation SessionCallbackRemovalScenario
 
-- (void)startBugsnag {
+- (void)configure {
+    [super configure];
     self.config.autoTrackSessions = false;
 
     [self.config addOnSessionBlock:^BOOL(BugsnagSession * _Nonnull session) {
@@ -27,9 +29,8 @@
         session.device.id = nil;
         return true;
     };
-    [self.config addOnSessionBlock:block];
-    [self.config removeOnSessionBlock:block];
-    [super startBugsnag];
+    BugsnagOnSessionRef onSession = [self.config addOnSessionBlock:block];
+    [self.config removeOnSession:onSession];
 }
 
 - (void)run {

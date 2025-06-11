@@ -6,7 +6,8 @@
 //  Copyright © 2020 Bugsnag. All rights reserved.
 //
 
-#import "OnCrashHandlerScenario.h"
+#import "Scenario.h"
+#import "Logging.h"
 
 // Create crash handler
 void HandleCrashedThread(const BSG_KSCrashReportWriter *writer) {
@@ -35,12 +36,15 @@ void HandleCrashedThread(const BSG_KSCrashReportWriter *writer) {
     writer->endContainer(writer);
 }
 
+@interface OnCrashHandlerScenario : Scenario
+@end
+
 @implementation OnCrashHandlerScenario
 
-- (void)startBugsnag {
+- (void)configure {
+    [super configure];
     self.config.autoTrackSessions = NO;
     self.config.onCrashHandler = &HandleCrashedThread;
-    [super startBugsnag];
 }
 
 - (void)run {

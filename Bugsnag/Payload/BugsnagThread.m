@@ -8,18 +8,21 @@
 
 #import "BugsnagThread+Private.h"
 
+#import "BSGKeys.h"
 #import "BSG_KSBacktrace_Private.h"
 #import "BSG_KSCrashReportFields.h"
 #import "BSG_KSCrashSentry_Private.h"
 #import "BSG_KSMach.h"
 #import "BugsnagCollections.h"
-#import "BugsnagKeys.h"
 #import "BugsnagStackframe+Private.h"
 #import "BugsnagStacktrace.h"
 #import "BugsnagThread+Private.h"
+#import "BSG_KSCrashNames.h"
+#import "BSGDefines.h"
 
 #include <pthread.h>
 
+#if BSG_HAVE_MACH_THREADS
 // Protect access to thread-unsafe bsg_kscrashsentry_suspendThreads()
 static pthread_mutex_t bsg_suspend_threads_mutex = PTHREAD_MUTEX_INITIALIZER;
 
@@ -32,6 +35,12 @@ static void resume_threads(void) {
     bsg_kscrashsentry_resumeThreads();
     pthread_mutex_unlock(&bsg_suspend_threads_mutex);
 }
+#endif
+
+static NSString * thread_state_name(integer_t threadState) {
+    const char* stateCName = bsg_kscrashthread_state_name(threadState);
+    return stateCName ? [NSString stringWithUTF8String:stateCName] : nil;
+}
 
 #define kMaxAddresses 150 // same as BSG_kMaxBacktraceDepth
 
@@ -40,6 +49,7 @@ struct backtrace_t {
     uintptr_t addresses[kMaxAddresses];
 };
 
+#if BSG_HAVE_MACH_THREADS
 static void backtrace_for_thread(thread_t thread, struct backtrace_t *output) {
     BSG_STRUCT_MCONTEXT_L machineContext = {{0}};
     if (bsg_ksmachthreadState(thread, &machineContext)) {
@@ -48,6 +58,7 @@ static void backtrace_for_thread(thread_t thread, struct backtrace_t *output) {
         output->length = 0;
     }
 }
+#endif
 
 BSGThreadType BSGParseThreadType(NSString *type) {
     return [@"cocoa" isEqualToString:type] ? BSGThreadTypeCocoa : BSGThreadTypeReactNativeJs;
@@ -57,6 +68,7 @@ NSString *BSGSerializeThreadType(BSGThreadType type) {
     return type == BSGThreadTypeCocoa ? @"cocoa" : @"reactnativejs";
 }
 
+BSG_OBJC_DIRECT_MEMBERS
 @implementation BugsnagThread
 
 + (instancetype)threadFromJson:(NSDictionary *)json {
@@ -71,6 +83,7 @@ NSString *BSGSerializeThreadType(BSGThreadType type) {
                                                          name:json[@"name"]
                                          errorReportingThread:errorReportingThread
                                                          type:threadType
+                                                        state:json[@"state"]
                                                    stacktrace:stacktrace];
     return thread;
 }
@@ -79,12 +92,14 @@ NSString *BSGSerializeThreadType(BSGThreadType type) {
                       name:(NSString *)name
       errorReportingThread:(BOOL)errorReportingThread
                       type:(BSGThreadType)type
+                     state:(NSString *)state
                 stacktrace:(NSArray<BugsnagStackframe *> *)stacktrace {
     if ((self = [super init])) {
         _id = id;
         _name = name;
         _errorReportingThread = errorReportingThread;
         _type = type;
+        _state = state;
         _stacktrace = stacktrace;
     }
     return self;
@@ -94,7 +109,9 @@ NSString *BSGSerializeThreadType(BSGThreadType type) {
     if ((self = [super init])) {
         _errorReportingThread = [thread[@BSG_KSCrashField_Crashed] boolValue];
         _id = [thread[@BSG_KSCrashField_Index] stringValue];
+        _name = thread[@BSG_KSCrashField_Name];
         _type = BSGThreadTypeCocoa;
+        _state = thread[@BSG_KSCrashField_State];
         _crashInfoMessage = [thread[@BSG_KSCrashField_CrashInfoMessage] copy];
         NSArray *backtrace = thread[@BSG_KSCrashField_Backtrace][@BSG_KSCrashField_Contents];
         BugsnagStacktrace *frames = [[BugsnagStacktrace alloc] initWithTrace:backtrace binaryImages:binaryImages];
@@ -109,6 +126,7 @@ NSString *BSGSerializeThreadType(BSGThreadType type) {
     dict[@"name"] = self.name;
     dict[@"errorReportingThread"] = @(self.errorReportingThread);
     dict[@"type"] = BSGSerializeThreadType(self.type);
+    dict[@"state"] = self.state;
     dict[@"errorReportingThread"] = @(self.errorReportingThread);
 
     NSMutableArray *array = [NSMutableArray new];
@@ -133,14 +151,11 @@ NSString *BSGSerializeThreadType(BSGThreadType type) {
 /**
  * Deerializes Bugsnag Threads from a KSCrash report
  */
-+ (NSMutableArray<BugsnagThread *> *)threadsFromArray:(NSArray *)threads
-                                         binaryImages:(NSArray *)binaryImages
-                                                depth:(NSUInteger)depth
-                                            errorType:(NSString *)errorType {
++ (NSMutableArray<BugsnagThread *> *)threadsFromArray:(NSArray *)threads binaryImages:(NSArray *)binaryImages {
     NSMutableArray *bugsnagThreads = [NSMutableArray new];
 
     for (NSDictionary *thread in threads) {
-        NSDictionary *threadInfo = [self enhanceThreadInfo:thread depth:depth errorType:errorType];
+        NSDictionary *threadInfo = [self enhanceThreadInfo:thread];
         BugsnagThread *obj = [[BugsnagThread alloc] initWithThread:threadInfo binaryImages:binaryImages];
         [bugsnagThreads addObject:obj];
     }
@@ -148,42 +163,39 @@ NSString *BSGSerializeThreadType(BSGThreadType type) {
 }
 
 /**
- * Enhances the thread information recorded by KSCrash. Specifically, this will trim the error reporting thread frames
- * by the `depth` configured, and add information to each frame indicating whether they
- * are within the program counter/link register.
- *
- * The error reporting thread is the thread on which the error occurred, and is given more
- * prominence in the Bugsnag Dashboard - therefore we enhance it with extra info.
- *
- * @param thread the captured thread
- * @param depth the 'depth'. This is equivalent to the number of frames which should be discarded from a report,
- * and is configurable by the user.
- * @param errorType the type of error as recorded by KSCrash (e.g. mach, signal)
- * @return the enhanced thread information
+ * Adds isPC and isLR values to a KSCrashReport thread dictionary.
  */
-+ (NSDictionary *)enhanceThreadInfo:(NSDictionary *)thread
-                              depth:(NSUInteger)depth
-                          errorType:(NSString *)errorType {
++ (NSDictionary *)enhanceThreadInfo:(NSDictionary *)thread {
     NSArray *backtrace = thread[@"backtrace"][@"contents"];
     BOOL isReportingThread = [thread[@"crashed"] boolValue];
 
     if (isReportingThread) {
-        BOOL stackOverflow = [thread[@"stack"][@"overflow"] boolValue];
-        NSUInteger seen = 0;
+        NSDictionary *registers = thread[@ BSG_KSCrashField_Registers][@ BSG_KSCrashField_Basic];
+#if TARGET_CPU_ARM || TARGET_CPU_ARM64
+        NSNumber *pc = registers[@"pc"];
+        NSNumber *lr = registers[@"lr"];
+#elif TARGET_CPU_X86
+        NSNumber *pc = registers[@"eip"];
+        NSNumber *lr = nil;
+#elif TARGET_CPU_X86_64
+        NSNumber *pc = registers[@"rip"];
+        NSNumber *lr = nil;
+#else
+#error Unsupported CPU architecture
+#endif
+
         NSMutableArray *stacktrace = [NSMutableArray array];
 
         for (NSDictionary *frame in backtrace) {
             NSMutableDictionary *mutableFrame = [frame mutableCopy];
-            if (seen++ >= depth) {
-                // Mark the frame so we know where it came from
-                if (seen == 1 && !stackOverflow) {
-                    mutableFrame[BSGKeyIsPC] = @YES;
-                }
-                if (seen == 2 && !stackOverflow && [@[BSGKeySignal, BSGKeyMach] containsObject:errorType]) {
-                    mutableFrame[BSGKeyIsLR] = @YES;
-                }
-                [stacktrace addObject:mutableFrame];
+            NSNumber *instructionAddress = frame[@ BSG_KSCrashField_InstructionAddr]; 
+            if ([instructionAddress isEqual:pc]) {
+                mutableFrame[BSGKeyIsPC] = @YES;
             }
+            if ([instructionAddress isEqual:lr]) {
+                mutableFrame[BSGKeyIsLR] = @YES;
+            }
+            [stacktrace addObject:mutableFrame];
         }
         NSMutableDictionary *mutableBacktrace = [thread[@"backtrace"] mutableCopy];
         mutableBacktrace[@"contents"] = stacktrace;
@@ -210,10 +222,11 @@ NSString *BSGSerializeThreadType(BSGThreadType type) {
 }
 
 + (NSArray<BugsnagThread *> *)allThreadsWithCurrentThreadBacktrace:(struct backtrace_t *)currentThreadBacktrace {
-    thread_t *threads = NULL;
-    mach_msg_type_number_t threadCount = 0;
+    integer_t *threadStates = NULL;
+    unsigned threadCount = 0;
 
-    if (task_threads(mach_task_self(), &threads, &threadCount) != KERN_SUCCESS) {
+    thread_t *threads = bsg_ksmachgetAllThreads(&threadCount);
+    if (threads == NULL) {
         return @[];
     }
 
@@ -224,6 +237,13 @@ NSString *BSGSerializeThreadType(BSGThreadType type) {
         goto cleanup;
     }
 
+    threadStates = calloc(threadCount, sizeof(*threadStates));
+    if (!threadStates) {
+        goto cleanup;
+    }
+    bsg_ksmachgetThreadStates(threads, threadStates, threadCount);
+
+#if BSG_HAVE_MACH_THREADS
     suspend_threads();
 
     // While threads are suspended only async-signal-safe functions should be used,
@@ -240,11 +260,13 @@ NSString *BSGSerializeThreadType(BSGThreadType type) {
     }
 
     resume_threads();
+#endif
 
     for (mach_msg_type_number_t i = 0; i < threadCount; i++) {
         BOOL isCurrentThread = MACH_PORT_INDEX(threads[i]) == MACH_PORT_INDEX(bsg_ksmachthread_self());
         struct backtrace_t *backtrace = isCurrentThread ? currentThreadBacktrace : &backtraces[i];
         [objects addObject:[[BugsnagThread alloc] initWithMachThread:threads[i]
+                                                               state:thread_state_name(threadStates[i])
                                                   backtraceAddresses:backtrace->addresses
                                                      backtraceLength:backtrace->length
                                                 errorReportingThread:isCurrentThread
@@ -252,74 +274,79 @@ NSString *BSGSerializeThreadType(BSGThreadType type) {
     }
 
 cleanup:
-    for (mach_msg_type_number_t i = 0; i < threadCount; i++) {
-        mach_port_deallocate(mach_task_self(), threads[i]);
-    }
-    vm_deallocate(mach_task_self(), (vm_address_t)threads, sizeof(thread_t) * threadCount);
-
+    bsg_ksmachfreeThreads(threads, threadCount);
     free(backtraces);
+    free(threadStates);
     return objects;
 }
 
 + (instancetype)currentThreadWithBacktrace:(struct backtrace_t *)backtrace {
-    thread_t thread = mach_thread_self();
-    thread_t *threads = NULL;
-    mach_msg_type_number_t threadCount = 0;
-    mach_msg_type_number_t threadIndex = 0;
-    if (task_threads(mach_task_self(), &threads, &threadCount) == KERN_SUCCESS) {
-        for (mach_msg_type_number_t i = 0; i < threadCount; i++) {
-            if (MACH_PORT_INDEX(threads[i]) == MACH_PORT_INDEX(thread)) {
+    thread_t selfThread = mach_thread_self();
+    NSString *threadState = thread_state_name(bsg_ksmachgetThreadState(selfThread));
+
+    unsigned threadCount = 0;
+    thread_t *threads = bsg_ksmachgetAllThreads(&threadCount);
+    unsigned threadIndex = 0;
+    if (threads != NULL) {
+        for (unsigned i = 0; i < threadCount; i++) {
+            if (MACH_PORT_INDEX(threads[i]) == MACH_PORT_INDEX(selfThread)) {
                 threadIndex = i;
+                break;
             }
-            mach_port_deallocate(mach_task_self(), threads[i]);
         }
-        vm_deallocate(mach_task_self(), (vm_address_t)threads, sizeof(thread_t) * threadCount);
     }
-    BugsnagThread *object = [[BugsnagThread alloc] initWithMachThread:thread
-                                                   backtraceAddresses:backtrace->addresses
-                                                      backtraceLength:backtrace->length
-                                                 errorReportingThread:YES
-                                                                index:threadIndex];
-    mach_port_deallocate(mach_task_self(), thread);
-    return object;
+    bsg_ksmachfreeThreads(threads, threadCount);
+
+    return [[BugsnagThread alloc] initWithMachThread:selfThread
+                                               state:threadState
+                                  backtraceAddresses:backtrace->addresses
+                                     backtraceLength:backtrace->length
+                                errorReportingThread:YES
+                                               index:threadIndex];
 }
 
+#if BSG_HAVE_MACH_THREADS
 + (nullable instancetype)mainThread {
-    thread_t *threads = NULL;
-    mach_msg_type_number_t threadCount = 0;
-    if (task_threads(mach_task_self(), &threads, &threadCount) != KERN_SUCCESS) {
+    unsigned threadCount = 0;
+    thread_t *threads = bsg_ksmachgetAllThreads(&threadCount);
+    if (threads == NULL) {
         return nil;
     }
 
+    struct backtrace_t backtrace;
+    NSString *threadState = nil;
     BugsnagThread *object = nil;
-    if (threadCount) {
-        thread_t thread = threads[0];
-        if (MACH_PORT_INDEX(thread) == MACH_PORT_INDEX(bsg_ksmachthread_self())) {
-            return nil;
-        }
-        struct backtrace_t backtrace;
-        BOOL needsResume = NO;
-        needsResume = thread_suspend(thread) == KERN_SUCCESS;
-        backtrace_for_thread(thread, &backtrace);
-        if (needsResume) {
-            thread_resume(thread);
-        }
-        object = [[BugsnagThread alloc] initWithMachThread:thread
-                                        backtraceAddresses:backtrace.addresses
-                                           backtraceLength:backtrace.length
-                                      errorReportingThread:YES
-                                                     index:0];
+
+    if (threadCount == 0) {
+        goto cleanup;
     }
 
-    for (mach_msg_type_number_t i = 0; i < threadCount; i++) {
-        mach_port_deallocate(mach_task_self(), threads[i]);
+    thread_t thread = threads[0];
+    if (MACH_PORT_INDEX(thread) == MACH_PORT_INDEX(bsg_ksmachthread_self())) {
+        goto cleanup;
     }
-    vm_deallocate(mach_task_self(), (vm_address_t)threads, sizeof(thread_t) * threadCount);
 
+    threadState = thread_state_name(bsg_ksmachgetThreadState(thread));
+    BOOL needsResume = thread_suspend(thread) == KERN_SUCCESS;
+    backtrace_for_thread(thread, &backtrace);
+    if (needsResume) {
+        thread_resume(thread);
+    }
+    object = [[BugsnagThread alloc] initWithMachThread:thread
+                                                 state:threadState
+                                    backtraceAddresses:backtrace.addresses
+                                       backtraceLength:backtrace.length
+                                  errorReportingThread:YES
+                                                 index:0];
+
+cleanup:
+    bsg_ksmachfreeThreads(threads, threadCount);
     return object;
 }
+#endif
 
 - (instancetype)initWithMachThread:(thread_t)machThread
+                             state:(NSString *)state
                 backtraceAddresses:(uintptr_t *)backtraceAddresses
                    backtraceLength:(NSUInteger)backtraceLength
               errorReportingThread:(BOOL)errorReportingThread
@@ -334,6 +361,7 @@ cleanup:
                        name:name[0] ? @(name) : nil
        errorReportingThread:errorReportingThread
                        type:BSGThreadTypeCocoa
+                      state:state
                  stacktrace:[BugsnagStackframe stackframesWithBacktrace:backtraceAddresses length:backtraceLength]];
 }
 

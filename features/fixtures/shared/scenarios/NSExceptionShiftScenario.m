@@ -1,11 +1,14 @@
-#import "NSExceptionShiftScenario.h"
-#import <Bugsnag/Bugsnag.h>
+#import "Scenario.h"
+#import "Logging.h"
+
+@interface NSExceptionShiftScenario : Scenario
+@end
 
 @implementation NSExceptionShiftScenario
 
-- (void)startBugsnag {
+- (void)configure {
+    [super configure];
     self.config.autoTrackSessions = NO;
-    [super startBugsnag];
 }
 
 - (void)run {

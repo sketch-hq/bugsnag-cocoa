@@ -67,12 +67,6 @@ Here’s a bit about our process designing and building the Bugsnag libraries:
 
 For an overview of source code organisation, see [ORGANIZATION.md](ORGANIZATION.md).
 
-## Building
-
-Each OS version of `Bugsnag` has an Xcode project in a directory named for the
-OS. For example, to build and run `Bugsnag` for iOS, open
-`iOS/Bugsnag.xcodeproj`.
-
 ## Testing
 
 Run the unit tests for the `Bugsnag` library from Xcode or by running `make
@@ -165,6 +159,6 @@ Run the integration tests - see [TESTING.md](TESTING.md#end-to-end-tests).
 * Plan to make releases to downstream libraries once adoption of the main
   library has begun, if appropriate (generally for bug fixes).  These include:
   * [bugsnag-js](https://github.com/bugsnag/bugsnag-js) - see [JS Contributing Guide](https://github.com/bugsnag/bugsnag-js/blob/next/packages/react-native/CONTRIBUTING.md#ios)
-  * [bugsnag-cocos2dx](https://github.com/bugsnag/bugsnag-cocos2dx)
   * [bugsnag-unity](https://github.com/bugsnag/bugsnag-unity)
-
+  * [bugsnag-unreal](https://github.com/bugsnag/bugsnag-unreal)
+  * [bugsnag-cocos2dx](https://github.com/bugsnag/bugsnag-cocos2dx) - critical fixes only

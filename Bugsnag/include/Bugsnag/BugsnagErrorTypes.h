@@ -8,31 +8,36 @@
 
 #import <Foundation/Foundation.h>
 
+#import <Bugsnag/BugsnagDefines.h>
+
 /**
  * The types of error that should be reported.
  */
+BUGSNAG_EXTERN
 @interface BugsnagErrorTypes : NSObject
 
 /**
  * Determines whether App Hang events should be reported to bugsnag.
  *
  * This flag is true by default.
+ *
+ * Note: this flag is ignored in App Extensions, where app hang detection is always disabled.
  */
-@property (nonatomic) BOOL appHangs;
+@property (nonatomic) BOOL appHangs API_UNAVAILABLE(watchos);
 
 /**
  * Determines whether Out of Memory events should be reported to bugsnag.
  *
  * This flag is true by default.
  */
-@property (nonatomic) BOOL ooms;
+@property (nonatomic) BOOL ooms API_UNAVAILABLE(watchos);
 
 /**
  * Determines whether Thermal Kill events should be reported to bugsnag.
  *
  * This flag is true by default.
  */
-@property (nonatomic) BOOL thermalKills;
+@property (nonatomic) BOOL thermalKills API_UNAVAILABLE(watchos);
 
 /**
  * Determines whether NSExceptions should be reported to bugsnag.
@@ -46,7 +51,7 @@
  *
  * This flag is true by default.
  */
-@property (nonatomic) BOOL signals;
+@property (nonatomic) BOOL signals API_UNAVAILABLE(watchos);
 
 /**
  * Determines whether C errors should be reported to bugsnag.
@@ -60,7 +65,7 @@
  *
  * This flag is true by default.
  */
-@property (nonatomic) BOOL machExceptions;
+@property (nonatomic) BOOL machExceptions API_UNAVAILABLE(watchos);
 
 /**
  * Sets whether Bugsnag should automatically capture and report unhandled promise rejections.

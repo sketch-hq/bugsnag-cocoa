@@ -24,17 +24,22 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#import "ObjCMsgSendScenario.h"
+#import "Scenario.h"
+#import "Logging.h"
+
 #import <objc/message.h>
 
 /**
  * Send a message to an invalid object, resulting in a crash inside objc_msgSend().
  */
+@interface ObjCMsgSendScenario : Scenario
+@end
+
 @implementation ObjCMsgSendScenario
 
-- (void)startBugsnag {
+- (void)configure {
+    [super configure];
     self.config.autoTrackSessions = NO;
-    [super startBugsnag];
 }
 
 - (void)run {

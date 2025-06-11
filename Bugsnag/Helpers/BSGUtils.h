@@ -8,13 +8,23 @@
 
 #import <Foundation/Foundation.h>
 
-#if TARGET_OS_IOS
+#import "BSGDefines.h"
 #import "BSGUIKit.h"
-#endif
 
 __BEGIN_DECLS
 
 NS_ASSUME_NONNULL_BEGIN
+
+/// Returns a heap allocated null-terminated C string with the contents of `data`, or NULL if `data` is nil or empty.
+char *_Nullable BSGCStringWithData(NSData *_Nullable data);
+
+/// Changes the NSFileProtectionKey attribute of the specified file or directory from NSFileProtectionComplete to NSFileProtectionCompleteUnlessOpen.
+/// Has no effect if the specified file or directory does not have NSFileProtectionComplete.
+///
+/// Files with NSFileProtectionComplete cannot be read from or written to while the device is locked or booting.
+///
+/// Files with NSFileProtectionCompleteUnlessOpen can be created while the device is locked, but once closed, cannot be opened again until the device is unlocked.
+BOOL BSGDisableNSFileProtectionComplete(NSString *path);
 
 dispatch_queue_t BSGGetFileSystemQueue(void);
 
@@ -24,6 +34,18 @@ NSString *_Nullable BSGStringFromDeviceOrientation(UIDeviceOrientation orientati
 
 API_AVAILABLE(ios(11.0), tvos(11.0))
 NSString *_Nullable BSGStringFromThermalState(NSProcessInfoThermalState thermalState);
+
+static inline NSString * _Nullable BSGStringFromClass(Class _Nullable cls) {
+    return cls ? NSStringFromClass((Class _Nonnull)cls) : nil;
+}
+
+/**
+ * Copy characters from src to dst, up to a maximum of length bytes (including the NUL terminator).
+ * Unlike strncpy, this function always ensures that dst is NUL terminated (if length > 0).
+ */
+void bsg_safe_strncpy(char *dst, const char *src, size_t length);
+
+NSString * _Nullable BSGPreventInlining(NSString * _Nullable someValue);
 
 NS_ASSUME_NONNULL_END
 

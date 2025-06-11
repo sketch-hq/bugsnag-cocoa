@@ -33,15 +33,6 @@
 #define BSG_KSCrashReportType_Standard "standard"
 #define BSG_KSCrashReportType_Custom "custom"
 
-#pragma mark - Memory Types -
-
-#define BSG_KSCrashMemType_Block "objc_block"
-#define BSG_KSCrashMemType_Class "objc_class"
-#define BSG_KSCrashMemType_NullPointer "null_pointer"
-#define BSG_KSCrashMemType_Object "objc_object"
-#define BSG_KSCrashMemType_String "string"
-#define BSG_KSCrashMemType_Unknown "unknown"
-
 #pragma mark - Exception Types -
 
 #define BSG_KSCrashExcType_CPPException "cpp_exception"
@@ -60,10 +51,9 @@
 #define BSG_KSCrashField_Ivars "ivars"
 #define BSG_KSCrashField_Language "language"
 #define BSG_KSCrashField_Name "name"
-#define BSG_KSCrashField_ReferencedObject "referenced_object"
 #define BSG_KSCrashField_Type "type"
+#define BSG_KSCrashField_UserInfo "userInfo"
 #define BSG_KSCrashField_UUID "uuid"
-#define BSG_KSCrashField_Value "value"
 
 #define BSG_KSCrashField_Error "error"
 #define BSG_KSCrashField_JSONData "json_data"
@@ -98,7 +88,6 @@
 #define BSG_KSCrashField_CrashInfoMessage "crash_info_message"
 #define BSG_KSCrashField_CurrentThread "current_thread"
 #define BSG_KSCrashField_DispatchQueue "dispatch_queue"
-#define BSG_KSCrashField_NotableAddresses "notable_addresses"
 #define BSG_KSCrashField_Registers "registers"
 #define BSG_KSCrashField_Skipped "skipped"
 #define BSG_KSCrashField_Stack "stack"
@@ -114,7 +103,7 @@
 #pragma mark - Memory -
 
 #define BSG_KSCrashField_Free "free"
-#define BSG_KSCrashField_Usable "usable"
+#define BSG_KSCrashField_Size "size"
 
 #pragma mark - Error -
 
@@ -144,19 +133,13 @@
 
 #pragma mark - App Stats -
 
-#define BSG_KSCrashField_ActiveTimeSinceCrash "active_time_since_last_crash"
 #define BSG_KSCrashField_ActiveTimeSinceLaunch "active_time_since_launch"
 #define BSG_KSCrashField_AppInFG "application_in_foreground"
-#define BSG_KSCrashField_BGTimeSinceCrash "background_time_since_last_crash"
 #define BSG_KSCrashField_BGTimeSinceLaunch "background_time_since_launch"
-#define BSG_KSCrashField_LaunchesSinceCrash "launches_since_last_crash"
-#define BSG_KSCrashField_SessionsSinceCrash "sessions_since_last_crash"
-#define BSG_KSCrashField_SessionsSinceLaunch "sessions_since_launch"
 
 #pragma mark - Report -
 
 #define BSG_KSCrashField_Crash "crash"
-#define BSG_KSCrashField_Diagnosis "diagnosis"
 #define BSG_KSCrashField_ID "id"
 #define BSG_KSCrashField_ProcessName "process_name"
 #define BSG_KSCrashField_Report "report"
@@ -170,6 +153,7 @@
 #pragma mark Standard
 #define BSG_KSCrashField_AppStats "application_stats"
 #define BSG_KSCrashField_BinaryImages "binary_images"
+#define BSG_KSCrashField_Disk "disk"
 #define BSG_KSCrashField_SystemAtCrash "system_atcrash"
 #define BSG_KSCrashField_System "system"
 #define BSG_KSCrashField_Memory "memory"

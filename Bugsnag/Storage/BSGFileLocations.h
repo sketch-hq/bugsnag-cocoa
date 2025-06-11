@@ -8,17 +8,22 @@
 
 #import <Foundation/Foundation.h>
 
+#import "BSGDefines.h"
+
 NS_ASSUME_NONNULL_BEGIN
 
+BSG_OBJC_DIRECT_MEMBERS
 @interface BSGFileLocations : NSObject
 
-@property (readonly, nonatomic) NSString *kvStore;
 @property (readonly, nonatomic) NSString *breadcrumbs;
 @property (readonly, nonatomic) NSString *events;
 @property (readonly, nonatomic) NSString *kscrashReports;
 @property (readonly, nonatomic) NSString *sessions;
+@property (readonly, nonatomic) NSString *featureFlags;
+
 /**
  Absolute path to lock file.
+ - Note: Added by Sketch.
  */
 @property (readonly, nonatomic) NSString *lockFile;
 
@@ -26,11 +31,6 @@ NS_ASSUME_NONNULL_BEGIN
  * File containing details of the current app hang (if the app is hung)
  */
 @property (readonly, nonatomic) NSString *appHangEvent;
-
-/**
-* File containing details of the document serialization information
- */
-@property (readonly, nonatomic) NSString *documentSerializationInformation;
 
 /**
  * File whose presence indicates that the libary at least attempted to handle the last
@@ -47,6 +47,10 @@ NS_ASSUME_NONNULL_BEGIN
  * General per-launch metadata
  */
 @property (readonly, nonatomic) NSString *metadata;
+/**
+ * BSGRunContext
+ */
+@property (readonly, nonatomic) NSString *runContext;
 
 /**
  * State info that gets added to the low level crash report.
@@ -59,19 +63,31 @@ NS_ASSUME_NONNULL_BEGIN
 @property (readonly, nonatomic) NSString *systemState;
 
 /**
+ * Persistent device ID shared with bugsnag-performance.
+ */
+@property (readonly, nonatomic) NSString *persistentDeviceID;
+
+/**
  * Returns `YES` if the receiver uses an exclusive subdirectory, `NO` if it uses the shared default directory.
+ *
+ * - Note: Added by Sketch.
  */
 @property (readonly, nonatomic) BOOL usesExclusiveSubdirectory;
 /**
  Initialize the file locations.
  @param subdirectory If nil, use the regular shared directory. Else use the subdirectory with the given name, inside the `exclusiveDirectoryContainer`.
+
+ @note: Added by Sketch.
  */
 - (instancetype) initWithSubdirectory:(NSString * _Nullable)subdirectory;
 
 /**
  Get the singleton, initializing it with the given subdirectory. Note that it is an error to call this multiple times with differing values.
+
+ - Note: Added by Sketch.
  */
 + (instancetype) currentWithSubdirectory:(NSString * _Nullable)subdirectory;
+
 /**
  Get the singleton. If not yet initialized, initializes it with a `nil` subdirectory.
  */

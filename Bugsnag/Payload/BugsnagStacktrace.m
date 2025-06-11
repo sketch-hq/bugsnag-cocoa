@@ -8,9 +8,10 @@
 
 #import "BugsnagStacktrace.h"
 
-#import "BugsnagKeys.h"
+#import "BSGKeys.h"
 #import "BugsnagStackframe+Private.h"
 
+BSG_OBJC_DIRECT_MEMBERS
 @implementation BugsnagStacktrace
 
 + (instancetype)stacktraceFromJson:(NSArray<NSDictionary *> *)json {
@@ -44,14 +45,6 @@
         }
     }
     return self;
-}
-
-- (NSArray *)toArray {
-    NSMutableArray *array = [NSMutableArray new];
-    for (BugsnagStackframe *frame in self.trace) {
-        [array addObject:[frame toDictionary]];
-    }
-    return array;
 }
 
 @end

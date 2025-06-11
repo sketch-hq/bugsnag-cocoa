@@ -1,34 +1,52 @@
 #!/usr/bin/env bash
 
-set -o errexit
+set -euo pipefail
 
-cd features/fixtures/macos
+# "Release" or "Debug" must be specified
+if [ "$1" != "Release" ] && [ "$1" != "Debug" ]; then
+  echo "Usage: $0 [release|debug]"
+  exit 1
+fi
 
-echo "--- macOSTestApp: pod install"
+BUILD_CONFIGURATION=$1
 
-pod install
+pushd features/fixtures/macos
 
-echo "--- macOSTestApp: xcodebuild archive"
+  echo "--- macOSTestApp: xcodebuild archive"
 
-xcrun xcodebuild \
-  -workspace macOSTestApp.xcworkspace \
-  -scheme macOSTestApp \
-  -configuration Debug \
-  -archivePath archive/macOSTestApp.xcarchive \
-  -quiet \
-  archive
+  BUILD_ARGS=(
+    -workspace macOSTestApp.xcworkspace
+    -scheme macOSTestApp
+    -destination generic/platform=macOS
+    -configuration ${BUILD_CONFIGURATION}
+    -archivePath archive/macOSTestApp.xcarchive
+    -quiet
+    archive
+    ONLY_ACTIVE_ARCH=NO
+  )
 
-echo "--- macOSTestApp: xcodebuild -exportArchive"
+  if [ "${ENABLE_CODE_COVERAGE:-}" = YES ]; then
+    BUILD_ARGS+=(
+      OTHER_CFLAGS='$(inherited) -fprofile-instr-generate -fcoverage-mapping'
+      OTHER_LDFLAGS='$(inherited) -fprofile-instr-generate'
+      OTHER_SWIFT_FLAGS='$(inherited) -profile-generate -profile-coverage-mapping'
+    )
+  fi
 
-xcrun xcodebuild \
-  -exportArchive \
-  -exportPath output/ \
-  -exportOptionsPlist exportOptions.plist \
-  -archivePath archive/macOSTestApp.xcarchive \
-  -quiet
+  xcodebuild "${BUILD_ARGS[@]}"
 
-cd output
+  echo "--- macOSTestApp: xcodebuild -exportArchive"
 
-echo "--- macOSTestApp: zip"
+  xcrun xcodebuild \
+    -exportArchive \
+    -exportPath output/ \
+    -exportOptionsPlist exportOptions.plist \
+    -archivePath archive/macOSTestApp.xcarchive \
+    -destination generic/platform=macOS \
+    -quiet
 
-zip -r macOSTestApp.zip macOSTestApp.app
+  pushd output
+    echo "--- macOSTestApp: zip"
+    zip -qr macOSTestApp_$BUILD_CONFIGURATION.zip macOSTestApp.app
+  popd
+popd

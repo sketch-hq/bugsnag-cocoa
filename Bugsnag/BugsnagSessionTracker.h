@@ -8,27 +8,25 @@
 
 #import <Foundation/Foundation.h>
 
-#import "BugsnagSession.h"
-#import "BugsnagConfiguration.h"
+#import <Bugsnag/BugsnagConfiguration.h>
+#import <Bugsnag/BugsnagSession.h>
 
-@class BugsnagSessionTrackingApiClient;
+#import "BSGSessionUploader.h"
 
-typedef void (^SessionTrackerCallback)(BugsnagSession *newSession);
+NS_ASSUME_NONNULL_BEGIN
 
-extern NSString *const BSGSessionUpdateNotification;
-
+BSG_OBJC_DIRECT_MEMBERS
 @interface BugsnagSessionTracker : NSObject
 
 /**
  Create a new session tracker
 
  @param config The Bugsnag configuration to use
- @param callback A callback invoked each time a new session is started
  @return A new session tracker
  */
-- (instancetype)initWithConfig:(BugsnagConfiguration *)config
-                        client:(BugsnagClient *)client
-            postRecordCallback:(void(^)(BugsnagSession *))callback;
+- (instancetype)initWithConfig:(BugsnagConfiguration *)config client:(nullable BugsnagClient *)client;
+
+- (void)startWithNotificationCenter:(NSNotificationCenter *)notificationCenter isInForeground:(BOOL)isInForeground;
 
 /**
  Record and send a new session
@@ -45,15 +43,29 @@ extern NSString *const BSGSessionUpdateNotification;
 - (void)startNewSessionIfAutoCaptureEnabled;
 
 /**
- Update the details of the current session to account for externally reported
- session information. Current session details are included in subsequent crash
- reports.
+ Handle some variation of Bugsnag.notify() being called.
+ Increments the number of handled or unhandled errors recorded for the current session, if
+ a session exists.
  */
-- (void)registerExistingSession:(NSString *)sessionId
-                      startedAt:(NSDate *)startedAt
-                           user:(BugsnagUser *)user
-                   handledCount:(NSUInteger)handledCount
-                 unhandledCount:(NSUInteger)unhandledCount;
+- (void)incrementEventCountUnhandled:(BOOL)unhandled;
+
+@property (copy, nonatomic) NSString *codeBundleId;
+
+@property (nullable, nonatomic) BugsnagSession *currentSession;
+
+/**
+ * Retrieves the running session, or nil if the session is stopped or has not yet been started/resumed.
+ */
+@property (nullable, readonly, nonatomic) BugsnagSession *runningSession;
+
+@property (strong, nonatomic) BSGSessionUploader *sessionUploader;
+
+- (void)addRuntimeVersionInfo:(NSString *)info
+                      withKey:(NSString *)key;
+
+@end
+
+@interface BugsnagSessionTracker (/* not objc_direct */)
 
 /**
  Handle the app foregrounding event. If more than 30s has elapsed since being
@@ -70,19 +82,6 @@ extern NSString *const BSGSessionUpdateNotification;
  */
 - (void)handleAppBackgroundEvent;
 
-/**
- Handle some variation of Bugsnag.notify() being called.
- Increments the number of handled or unhandled errors recorded for the current session, if
- a session exists.
- */
-- (void)incrementEventCountUnhandled:(BOOL)unhandled;
-
-/**
- * Retrieves the running session, or nil if the session is stopped or has not yet been started/resumed.
- */
-@property (nonatomic, strong, readonly) BugsnagSession *runningSession;
-
-- (void)addRuntimeVersionInfo:(NSString *)info
-                      withKey:(NSString *)key;
-
 @end
+
+NS_ASSUME_NONNULL_END

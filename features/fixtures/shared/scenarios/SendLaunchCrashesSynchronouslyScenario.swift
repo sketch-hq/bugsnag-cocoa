@@ -10,17 +10,21 @@ class SendLaunchCrashesSynchronouslyScenario: Scenario {
     
     var startDuration: CFAbsoluteTime = 0
     
-    override func startBugsnag() {
+    override func configure() {
+        super.configure()
         config.autoTrackSessions = false
         config.sendThreads = .never
+    }
+
+    override func startBugsnag() {
         let startedAt = CFAbsoluteTimeGetCurrent()
         super.startBugsnag()
         startDuration = CFAbsoluteTimeGetCurrent() - startedAt
     }
     
     override func run() {
-        if eventMode == "report" {
-            NSLog(">>> Delaying to allow previous run's crash report to be sent")
+        if args[0] == "report" {
+            logDebug(">>> Delaying to allow previous run's crash report to be sent")
             DispatchQueue.main.asyncAfter(deadline: .now() + 5) { [startDuration] in
                 NSLog(">>> Calling notify() with startDuration = \(startDuration)")
                 Bugsnag.notifyError(NSError(domain: "DummyError", code: 0)) {
@@ -29,27 +33,8 @@ class SendLaunchCrashesSynchronouslyScenario: Scenario {
                 }
             }
         } else {
-            NSLog(">>> Calling fatalError()")
+            logDebug(">>> Calling fatalError()")
             fatalError()
         }
-    }
-}
-
-class SendLaunchCrashesSynchronouslyFalseScenario: SendLaunchCrashesSynchronouslyScenario {
-    
-    override func startBugsnag() {
-        config.sendLaunchCrashesSynchronously = false
-        super.startBugsnag()
-    }
-}
-
-class SendLaunchCrashesSynchronouslyLaunchCompletedScenario: SendLaunchCrashesSynchronouslyScenario {
-    
-    override func run() {
-        if eventMode != "report" {
-            NSLog(">>> Calling markLaunchCompleted()")
-            Bugsnag.markLaunchCompleted()
-        }
-        super.run()
     }
 }

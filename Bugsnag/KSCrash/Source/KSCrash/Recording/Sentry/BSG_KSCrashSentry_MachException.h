@@ -30,12 +30,17 @@
 #ifndef HDR_BSG_KSCrashSentry_MachException_h
 #define HDR_BSG_KSCrashSentry_MachException_h
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include "BSGDefines.h"
 
 #include "BSG_KSCrashSentry.h"
 #include <stdbool.h>
+#include <TargetConditionals.h>
+
+#if BSG_HAVE_MACH_EXCEPTIONS
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** Install our custom mach exception handler.
  *
@@ -51,6 +56,8 @@ void bsg_kscrashsentry_uninstallMachHandler(void);
 
 #ifdef __cplusplus
 }
+#endif
+
 #endif
 
 #endif // HDR_KSCrashSentry_MachException_h

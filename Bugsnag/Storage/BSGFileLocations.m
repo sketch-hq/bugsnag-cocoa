@@ -11,14 +11,9 @@
 #import "BSGInternalErrorReporter.h"
 #import "BugsnagLogger.h"
 
-static void ReportInternalError(NSString *errorClass, NSError *error) {
-    NSString *file = @(__FILE__).lastPathComponent;
-    NSString *message = BSGErrorDescription(error);
-    NSString *groupingHash = [NSString stringWithFormat:@"%@: %@: %@ %ld", file, errorClass, error.domain, (long)error.code];
-    [BSGInternalErrorReporter.sharedInstance reportErrorWithClass:errorClass message:message diagnostics:error.userInfo groupingHash:groupingHash];
-}
-
+/// - Note: Added by Sketch.
 static NSString * const BSGExclusiveDirectoryContainerName = @"exclusiveDirectories";
+/// - Note: Added by Sketch.
 static NSString * const BSGLockFileName = @"lockFile";
 
 
@@ -29,63 +24,97 @@ static BOOL ensureDirExists(NSString *path) {
         bsg_log_err(@"Could not create directory %@: %@", path, error);
         static dispatch_once_t onceToken;
         dispatch_once(&onceToken, ^{
-            ReportInternalError(@"Could not create directory", error);
+            [BSGInternalErrorReporter performBlock:^(BSGInternalErrorReporter *reporter) {
+                [reporter reportErrorWithClass:@"Could not create directory"
+                                       context:path.lastPathComponent
+                                       message:BSGErrorDescription(error)
+                                   diagnostics:error.userInfo];
+            }];
         });
         return NO;
     }
     return YES;
 }
 
-static NSString *rootDirectory(NSString *fsVersion, NSString *subdirectory) {
+static NSString *cachesDirectory(void) {
     // Default to an unusable location that will always fail.
-    static NSString* defaultRootPath = @"/";
     static NSString* rootPath = @"/";
-    
+
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
 #if TARGET_OS_TV
-    // On tvOS, locations outside the caches directory are not writable, so fall back to using that.
-    // https://developer.apple.com/library/archive/documentation/General/Conceptual/AppleTV_PG/index.html#//apple_ref/doc/uid/TP40015241
-    NSSearchPathDirectory directory = NSCachesDirectory;
+        // On tvOS, locations outside the caches directory are not writable, so fall back to using that.
+        // https://developer.apple.com/library/archive/documentation/General/Conceptual/AppleTV_PG/index.html#//apple_ref/doc/uid/TP40015241
+        NSSearchPathDirectory directory = NSCachesDirectory;
 #else
-    NSSearchPathDirectory directory = NSApplicationSupportDirectory;
+        NSSearchPathDirectory directory = NSApplicationSupportDirectory;
 #endif
-    NSError *error = nil;
-    NSURL *url = [NSFileManager.defaultManager URLForDirectory:directory inDomain:NSUserDomainMask appropriateForURL:nil create:YES error:&error];
-    if (!url) {
-        bsg_log_err(@"Could not locate directory for storage: %@", error);
-        return rootPath;
-    }
-    
-    if (subdirectory != nil) {
-        rootPath = [NSString stringWithFormat:@"%@/com.bugsnag.Bugsnag/%@/%@/%@/%@",
-                    url.path,
-                    // Processes that don't have an Info.plist have no bundleIdentifier
-                    NSBundle.mainBundle.bundleIdentifier ?: NSProcessInfo.processInfo.processName,
-                    fsVersion, BSGExclusiveDirectoryContainerName, subdirectory];
-    } else {
+        NSError *error = nil;
+        NSURL *url = [NSFileManager.defaultManager URLForDirectory:directory inDomain:NSUserDomainMask appropriateForURL:nil create:NO error:&error];
+        if (!url) {
+            bsg_log_err(@"Could not locate directory for storage: %@", error);
+            return;
+        }
+
+
+        rootPath = url.path;
+    });
+
+
+    return rootPath;
+}
+
+static NSString *bugsnagPath(NSString *fsVersion, NSString *subdirectory) {
+    // Default to an unusable location that will always fail.
+    static NSString* rootPath = @"/";
+
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
         rootPath = [NSString stringWithFormat:@"%@/com.bugsnag.Bugsnag/%@/%@",
-                    url.path,
+                    cachesDirectory(),
                     // Processes that don't have an Info.plist have no bundleIdentifier
                     NSBundle.mainBundle.bundleIdentifier ?: NSProcessInfo.processInfo.processName,
                     fsVersion];
+
+        ensureDirExists(rootPath);
+    });
+
+    // --- begin section added by Sketch
+    // if `subdirectory` is specified, append that to the exclusive directory container
+    // inside the root path, and return that instead.
+    if (subdirectory != nil) {
+        NSString *exclusivePath = [NSString stringWithFormat:@"%@/%@/%@",
+                                   rootPath, BSGExclusiveDirectoryContainerName, subdirectory];
+        ensureDirExists(exclusivePath);
+        return exclusivePath;
     }
-    
-    // If we can't even create the root dir, all is lost, and no file ops can be allowed.
-    if (!ensureDirExists(rootPath)) {
-        rootPath = defaultRootPath;
-    }
-    
+    // --- end section added by Sketch
+
     return rootPath;
+}
+
+static NSString *bugsnagSharedPath(void) {
+    // Default to an unusable location that will always fail.
+    static NSString* sharedPath = @"/";
+
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        sharedPath = [cachesDirectory() stringByAppendingFormat:@"/bugsnag-shared-%@",
+                      [[NSBundle mainBundle] bundleIdentifier]];
+
+        ensureDirExists(sharedPath);
+    });
+
+    return sharedPath;
 }
 
 static NSString *getAndCreateSubdir(NSString *rootPath, NSString *relativePath) {
     NSString *subdirPath = [rootPath stringByAppendingPathComponent:relativePath];
-    if (ensureDirExists(subdirPath)) {
-        return subdirPath;
-    }
-    // Make the best of it, just return the root dir.
-    return rootPath;
+    ensureDirExists(subdirPath);
+    return subdirPath;
 }
 
+BSG_OBJC_DIRECT_MEMBERS
 @interface BSGFileLocations()
 /// Name of the exclusive subdirectory used. Nil if the shared shared directory is used.
 @property (nonatomic, copy, nullable) NSString *exclusiveSubdirectory;
@@ -132,23 +161,26 @@ static dispatch_once_t onceToken;
 }
 
 - (instancetype)initWithVersion1WithSubdirectory:(NSString * _Nullable)subdirectory {
-    self = [super init];
-    if (self) {
-        NSString *root = rootDirectory(@"v1", subdirectory);
+    if ((self = [super init])) {
+        NSString *root = bugsnagPath(@"v1", subdirectory);
         _events = getAndCreateSubdir(root, @"events");
         _sessions = getAndCreateSubdir(root, @"sessions");
         _breadcrumbs = getAndCreateSubdir(root, @"breadcrumbs");
         _kscrashReports = getAndCreateSubdir(root, @"KSCrashReports");
-        _kvStore = getAndCreateSubdir(root, @"kvstore");
+        _featureFlags = getAndCreateSubdir(root, @"featureFlags");
         _appHangEvent = [root stringByAppendingPathComponent:@"app_hang.json"];
-        _documentSerializationInformation = [root stringByAppendingPathComponent:@"app_document_serialization.json"];
         _flagHandledCrash = [root stringByAppendingPathComponent:@"bugsnag_handled_crash.txt"];
         _configuration = [root stringByAppendingPathComponent:@"config.json"];
         _metadata = [root stringByAppendingPathComponent:@"metadata.json"];
+        _runContext = [root stringByAppendingPathComponent:@"run_context"];
         _state = [root stringByAppendingPathComponent:@"state.json"];
         _systemState = [root stringByAppendingPathComponent:@"system_state.json"];
+        // --- begin section added by Sketch
         _lockFile = [root stringByAppendingPathComponent:BSGLockFileName];
         _exclusiveSubdirectory = [subdirectory copy];
+        // --- end section added by Sketch
+
+        _persistentDeviceID = [bugsnagSharedPath() stringByAppendingPathComponent:@"device-id.json"];
     }
     return self;
 }
@@ -158,7 +190,7 @@ static dispatch_once_t onceToken;
 }
 
 + (NSString *)v1ExclusiveDirectoryContainer {
-    NSString *root = rootDirectory(@"v1", nil);
+    NSString *root = bugsnagPath(@"v1", nil);
     return [root stringByAppendingPathComponent:BSGExclusiveDirectoryContainerName];
 }
 

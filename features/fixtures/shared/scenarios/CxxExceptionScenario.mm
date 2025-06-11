@@ -24,63 +24,45 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#import "CxxExceptionScenario.h"
-#import <exception>
+#import "Scenario.h"
+#import "Logging.h"
 
-class kaboom_exception : public std::exception {
-    virtual const char *what() const throw();
-};
-
-const char *kaboom_exception::what() const throw() {
-    // Long enough to exceed BSG_KSCrashSentry_CPPException's DESCRIPTION_BUFFER_LENGTH
-    return ("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. "
-            "Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. "
-            "Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. "
-            "Excepteur sint occaecat cupidatat non proident, sunt in culpa qui  officia deserunt mollit anim id est laborum. "
-            "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. "
-            "Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. "
-            "Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. "
-            "Excepteur sint occaecat cupidatat non proident, sunt in culpa qui  officia deserunt mollit anim id est laborum. "
-            "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. "
-            "Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. "
-            "Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. "
-            "Excepteur sint occaecat cupidatat non proident, sunt in culpa qui  officia deserunt mollit anim id est laborum. ");
-}
+#import <stdexcept>
 
 /**
  * Throw an uncaught C++ exception. This is a difficult case for crash reporters to handle,
  * as it involves the destruction of the data necessary to generate a correct backtrace.
  */
-@implementation CxxExceptionScenario
-
-- (void)startBugsnag {
-    self.config.autoTrackSessions = NO;
-    [super startBugsnag];
-}
-
-- (void)run {
-    [self crash];
-}
-
-- (void)crash __attribute__((noreturn)) {
-    throw new kaboom_exception;
-}
-
+@interface CxxExceptionScenario : Scenario
 @end
 
-@implementation CxxExceptionOverrideScenario
+@implementation CxxExceptionScenario
 
-- (void)startBugsnag {
+- (void)configure {
+    [super configure];
     self.config.autoTrackSessions = NO;
-    [super startBugsnag];
 }
 
 - (void)run {
+    [[NSThread mainThread] setName:@"потік"];
     [self crash];
 }
 
 - (void)crash __attribute__((noreturn)) {
-    throw new kaboom_exception;
+    throw new std::runtime_error
+    // Long enough to exceed BSG_KSCrashSentry_CPPException's DESCRIPTION_BUFFER_LENGTH
+    ("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. "
+     "Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. "
+     "Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. "
+     "Excepteur sint occaecat cupidatat non proident, sunt in culpa qui  officia deserunt mollit anim id est laborum. "
+     "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. "
+     "Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. "
+     "Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. "
+     "Excepteur sint occaecat cupidatat non proident, sunt in culpa qui  officia deserunt mollit anim id est laborum. "
+     "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. "
+     "Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. "
+     "Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. "
+     "Excepteur sint occaecat cupidatat non proident, sunt in culpa qui  officia deserunt mollit anim id est laborum. ");
 }
 
 @end

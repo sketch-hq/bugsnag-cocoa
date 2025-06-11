@@ -27,6 +27,7 @@
 #if defined(__arm64__)
 
 #include "BSG_KSMach.h"
+#include "BSGDefines.h"
 
 //#define BSG_KSLogger_LocalLevel TRACE
 #include "BSG_KSLogger.h"
@@ -35,7 +36,7 @@ static const char *bsg_g_registerNames[] = {
     "x0",  "x1",  "x2",  "x3",  "x4",  "x5",  "x6",  "x7",  "x8",
     "x9",  "x10", "x11", "x12", "x13", "x14", "x15", "x16", "x17",
     "x18", "x19", "x20", "x21", "x22", "x23", "x24", "x25", "x26",
-    "x27", "x28", "x29", "fp",  "lr",  "sp",  "pc",  "cpsr"};
+    "x27", "x28", "fp",  "lr",  "sp",  "pc",  "cpsr"};
 static const int bsg_g_registerNamesCount =
     sizeof(bsg_g_registerNames) / sizeof(*bsg_g_registerNames);
 
@@ -46,24 +47,27 @@ static const int bsg_g_exceptionRegisterNamesCount =
 
 uintptr_t
 bsg_ksmachframePointer(const BSG_STRUCT_MCONTEXT_L *const machineContext) {
-    return machineContext->__ss.__fp;
+    // Must cast these because while the machine context always stores all registers
+    // as 64-bit, some watch devices are actually 64-bit with 32-bit addressing.
+    return (uintptr_t)machineContext->__ss.__fp;
 }
 
 uintptr_t
 bsg_ksmachstackPointer(const BSG_STRUCT_MCONTEXT_L *const machineContext) {
-    return machineContext->__ss.__sp;
+    return (uintptr_t)machineContext->__ss.__sp;
 }
 
 uintptr_t bsg_ksmachinstructionAddress(
     const BSG_STRUCT_MCONTEXT_L *const machineContext) {
-    return machineContext->__ss.__pc;
+    return (uintptr_t)machineContext->__ss.__pc;
 }
 
 uintptr_t
 bsg_ksmachlinkRegister(const BSG_STRUCT_MCONTEXT_L *const machineContext) {
-    return machineContext->__ss.__lr;
+    return (uintptr_t)machineContext->__ss.__lr;
 }
 
+#if BSG_HAVE_MACH_THREADS
 bool bsg_ksmachthreadState(const thread_t thread,
                            BSG_STRUCT_MCONTEXT_L *const machineContext) {
     return bsg_ksmachfillState(thread, (thread_state_t)&machineContext->__ss,
@@ -82,6 +86,7 @@ bool bsg_ksmachexceptionState(const thread_t thread,
                                ARM_EXCEPTION_STATE64,
                                ARM_EXCEPTION_STATE64_COUNT);
 }
+#endif
 
 int bsg_ksmachnumRegisters(void) { return bsg_g_registerNamesCount; }
 
@@ -95,20 +100,32 @@ const char *bsg_ksmachregisterName(const int regNumber) {
 uint64_t
 bsg_ksmachregisterValue(const BSG_STRUCT_MCONTEXT_L *const machineContext,
                         const int regNumber) {
-    if (regNumber <= 29) {
+// _structs.h:
+//    _STRUCT_ARM_THREAD_STATE64
+//    {
+//        __uint64_t __x[29]; /* General purpose registers x0-x28 */
+//        __uint64_t __fp;    /* Frame pointer x29 */
+//        __uint64_t __lr;    /* Link register x30 */
+//        __uint64_t __sp;    /* Stack pointer x31 */
+//        __uint64_t __pc;    /* Program counter */
+//        __uint32_t __cpsr;  /* Current program status register */
+//        __uint32_t __pad;   /* Same size for 32-bit or 64-bit clients */
+//    };
+
+    if (regNumber <= 28) {
         return machineContext->__ss.__x[regNumber];
     }
 
     switch (regNumber) {
-    case 30:
+    case 29:
         return machineContext->__ss.__fp;
-    case 31:
+    case 30:
         return machineContext->__ss.__lr;
-    case 32:
+    case 31:
         return machineContext->__ss.__sp;
-    case 33:
+    case 32:
         return machineContext->__ss.__pc;
-    case 34:
+    case 33:
         return machineContext->__ss.__cpsr;
     }
 
@@ -145,7 +162,7 @@ uint64_t bsg_ksmachexceptionRegisterValue(
 
 uintptr_t
 bsg_ksmachfaultAddress(const BSG_STRUCT_MCONTEXT_L *const machineContext) {
-    return machineContext->__es.__far;
+    return (uintptr_t)machineContext->__es.__far;
 }
 
 int bsg_ksmachstackGrowDirection(void) { return -1; }

@@ -24,18 +24,24 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#import "ReadGarbagePointerScenario.h"
+#import "Scenario.h"
+#import "Logging.h"
+
+#import "spin_malloc.h"
+
 #import <sys/mman.h>
-#include "spin_malloc.h"
 
 /**
  * Attempts to read from a garbage pointer that's not mapped but also isn't NULL.
  */
+@interface ReadGarbagePointerScenario : Scenario
+@end
+
 @implementation ReadGarbagePointerScenario
 
-- (void)startBugsnag {
+- (void)configure {
+    [super configure];
     self.config.autoTrackSessions = NO;
-    [super startBugsnag];
 }
 
 - (void)run {
