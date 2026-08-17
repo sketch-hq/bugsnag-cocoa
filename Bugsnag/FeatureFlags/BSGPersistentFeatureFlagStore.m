@@ -12,7 +12,7 @@
 #import "BugsnagLogger.h"
 #import <Foundation/Foundation.h>
 
-BSG_OBJC_DIRECT_MEMBERS
+
 @interface BSGPersistentFeatureFlagStore ()
 
 @property(nonatomic, readwrite) uint64_t currentIndex;
@@ -20,7 +20,7 @@ BSG_OBJC_DIRECT_MEMBERS
 
 @end
 
-BSG_OBJC_DIRECT_MEMBERS
+
 @implementation BSGPersistentFeatureFlagStore
 
 - (nonnull instancetype)initWithStorageDirectory:(NSString *)directory {
@@ -121,7 +121,8 @@ BSG_OBJC_DIRECT_MEMBERS
 }
 
 - (NSString *)pathForFlagWithName:(NSString *)name {
-    return [self.directoryPath stringByAppendingPathComponent: [NSString stringWithFormat:@"%@.json", name]];
+    NSString *fileName = [name stringByAddingPercentEncodingWithAllowedCharacters:NSCharacterSet.alphanumericCharacterSet];
+    return [self.directoryPath stringByAppendingPathComponent: [NSString stringWithFormat:@"%@.json", fileName]];
 }
 
 - (void)deleteFile:(NSString *)path {

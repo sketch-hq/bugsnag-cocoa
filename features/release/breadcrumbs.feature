@@ -48,12 +48,10 @@ Feature: Attaching a series of notable events leading up to errors
     And I invoke "notify_error"
     And I wait to receive an error
     And I discard the oldest error
+    And I invoke "notify_error_on_foreground"
     # Now we know that the backgrounding will occur at an appropriate time
     And I switch to the web browser for 2 seconds
-    # Give iOS sufficient time to raise the notification for foregrounding the app
-    And I make the test fixture wait for 1 second
     # This next error should have the notification breadcrumbs
-    And I invoke "notify_error"
     And I wait to receive an error
     Then the event has a "state" breadcrumb named "Bugsnag loaded"
     # Bugsnag has been started too late to capture some early notifications
@@ -72,7 +70,7 @@ Feature: Attaching a series of notable events leading up to errors
     And the event "breadcrumbs.0.name" equals "NSURLSession request failed"
     And the event "breadcrumbs.0.type" equals "request"
     And the event "breadcrumbs.0.metaData.method" equals "GET"
-    And the event "breadcrumbs.0.metaData.url" matches "http://.*:9\d{3}/reflect/"
+    And the event "breadcrumbs.0.metaData.url" matches "http://.*:[89]\d{3}/reflect/"
     And the event "breadcrumbs.0.metaData.urlParams.status" equals "444"
     And the event "breadcrumbs.0.metaData.urlParams.password" equals "[REDACTED]"
     And the event "breadcrumbs.0.metaData.status" equals 444
@@ -89,3 +87,19 @@ Feature: Attaching a series of notable events leading up to errors
     And the event "breadcrumbs.1.metaData.duration" is greater than 0
     And the event "breadcrumbs.1.metaData.requestContentLength" is null
     And the event "breadcrumbs.1.metaData.responseContentLength" is greater than 0
+
+  @watchos
+  Scenario: Invalidate calls on shared session should be ignored
+    Given I run "AutoInstrumentNetworkSharedSessionInvalidateScenario"
+    Then I wait to receive an error
+    And the event "breadcrumbs.0.timestamp" is a timestamp
+    And the event "breadcrumbs.0.name" equals "NSURLSession request failed"
+    And the event "breadcrumbs.0.type" equals "request"
+    And the event "breadcrumbs.0.metaData.method" equals "GET"
+    And the event "breadcrumbs.0.metaData.url" matches "http://.*:[89]\d{3}/reflect/"
+    And the event "breadcrumbs.0.metaData.urlParams.status" equals "444"
+    And the event "breadcrumbs.0.metaData.urlParams.password" equals "[REDACTED]"
+    And the event "breadcrumbs.0.metaData.status" equals 444
+    And the event "breadcrumbs.0.metaData.duration" is greater than 0
+    And the event "breadcrumbs.0.metaData.requestContentLength" is null
+    And the event "breadcrumbs.0.metaData.responseContentLength" is greater than 0

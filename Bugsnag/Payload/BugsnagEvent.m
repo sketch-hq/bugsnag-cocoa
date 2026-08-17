@@ -12,6 +12,7 @@
 #import "BSGMemoryFeatureFlagStore.h"
 #import "BSGJSONSerialization.h"
 #import "BSGKeys.h"
+#import "BSGHttpKeys.h"
 #import "BSGSerialization.h"
 #import "BSGUtils.h"
 #import "BSG_KSCrashReportFields.h"
@@ -69,6 +70,13 @@ NSString *BSGParseGroupingHash(NSDictionary *report) {
     id groupingHash = [report valueForKeyPath:@"user.overrides.groupingHash"];
     if (groupingHash)
         return groupingHash;
+    return nil;
+}
+
+NSString *BSGParseGroupingDiscriminator(NSDictionary *report) {
+    id groupingDiscriminator = [report valueForKeyPath:@"user.state.client.groupingDiscriminator"];
+    if ([groupingDiscriminator isKindOfClass:[NSString class]])
+        return groupingDiscriminator;
     return nil;
 }
 
@@ -142,7 +150,14 @@ NSDictionary *BSGParseCustomException(NSDictionary *report,
 
 // MARK: -
 
-BSG_OBJC_DIRECT_MEMBERS
+@interface BugsnagEvent ()
+
+@property (nonatomic) BOOL isDeliveryStrategySet;
+@property (nonatomic) BOOL attemptDeliveryOnCrash;
+
+@end
+
+
 @implementation BugsnagEvent
 
 /**
@@ -185,8 +200,35 @@ BSG_OBJC_DIRECT_MEMBERS
         _featureFlagStore = [[BSGMemoryFeatureFlagStore alloc] init];
         _threads = threads;
         _session = [session copy];
+        _isDeliveryStrategySet = NO;
+        _deliveryStrategy = SendImmediately;
+        _attemptDeliveryOnCrash = NO;
     }
     return self;
+}
+
+- (instancetype)initWithApp:(BugsnagAppWithState *)app
+                     device:(BugsnagDeviceWithState *)device
+               handledState:(BugsnagHandledState *)handledState
+                       user:(BugsnagUser *)user
+                   metadata:(BugsnagMetadata *)metadata
+                breadcrumbs:(NSArray<BugsnagBreadcrumb *> *)breadcrumbs
+                     errors:(NSArray<BugsnagError *> *)errors
+                    threads:(NSArray<BugsnagThread *> *)threads
+                    session:(BugsnagSession *)session
+     attemptDeliveryOnCrash:(BOOL) attemptDeliveryOnCrash {
+    BugsnagEvent *obj = [self initWithApp:app
+                                   device:device
+                             handledState:handledState
+                                     user:user
+                                 metadata:metadata
+                              breadcrumbs:breadcrumbs
+                                   errors:errors
+                                  threads:threads
+                                  session:session];
+
+    obj.attemptDeliveryOnCrash = attemptDeliveryOnCrash;
+    return obj;
 }
 
 - (instancetype)initWithJson:(NSDictionary *)json {
@@ -202,6 +244,7 @@ BSG_OBJC_DIRECT_MEMBERS
         }) ?: @[];
 
         _context = BSGDeserializeString(json[BSGKeyContext]);
+        _groupingDiscriminator = BSGDeserializeString(json[BSGKeyGroupingDiscriminator]);
 
         _correlation = [[BugsnagCorrelation alloc] initWithJsonDictionary:json[BSGKeyCorrelation]];
 
@@ -234,6 +277,16 @@ BSG_OBJC_DIRECT_MEMBERS
         }) ?: [[BugsnagUser alloc] init];
 
         _session = BSGSessionFromEventJson(json[BSGKeySession], _app, _device, _user);
+        _isDeliveryStrategySet = NO;
+        _attemptDeliveryOnCrash = NO;
+
+        _request = BSGDeserializeObject(json[BSGHttpRequest], ^id _Nullable(NSDictionary * _Nonnull dict) {
+            return [BugsnagHttpRequest requestFromJson:dict];
+        }) ?: [BugsnagHttpRequest new];
+
+        _response = BSGDeserializeObject(json[BSGHttpRequest], ^id _Nullable(NSDictionary * _Nonnull dict) {
+            return [BugsnagHttpResponse responseFromJson:dict];
+        }) ?: [BugsnagHttpResponse new];
     }
     return self;
 }
@@ -417,6 +470,7 @@ BSG_OBJC_DIRECT_MEMBERS
     obj.deviceAppHash = deviceAppHash;
     obj.featureFlagStore = BSGParseFeatureFlags(event);
     obj.context = [event valueForKeyPath:@"user.state.client.context"];
+    obj.groupingDiscriminator = BSGParseGroupingDiscriminator(event);
     obj.customException = BSGParseCustomException(event, [errors[0].errorClass copy], [errors[0].errorMessage copy]);
     obj.depth = depth;
     obj.usage = [event valueForKeyPath:@"user._usage"];
@@ -444,6 +498,7 @@ BSG_OBJC_DIRECT_MEMBERS
     }
     _apiKey = BSGDeserializeString(json[BSGKeyApiKey]);
     _context = BSGDeserializeString(json[BSGKeyContext]);
+    _groupingDiscriminator = BSGDeserializeString(json[BSGKeyGroupingDiscriminator]);
     _featureFlagStore = [[BSGMemoryFeatureFlagStore alloc] init];
     _groupingHash = BSGDeserializeString(json[BSGKeyGroupingHash]);
 
@@ -622,6 +677,7 @@ BSG_OBJC_DIRECT_MEMBERS
     event[BSGKeyApp] = [self.app toDict];
 
     event[BSGKeyContext] = [self context];
+    event[BSGKeyGroupingDiscriminator] = [self groupingDiscriminator];
     event[BSGKeyCorrelation] = [self.correlation toJsonDictionary];
     event[BSGKeyFeatureFlags] = BSGFeatureFlagStoreToJSON(self.featureFlagStore);
     event[BSGKeyGroupingHash] = self.groupingHash;
@@ -653,6 +709,34 @@ BSG_OBJC_DIRECT_MEMBERS
     event[BSGKeySession] = self.session ? BSGSessionToEventJson((BugsnagSession *_Nonnull)self.session) : nil;
 
     event[BSGKeyUsage] = self.usage;
+
+
+    // Redact http request headers and params
+    if (self.request != nil) {
+        NSMutableDictionary *redactedReqHeaders = [NSMutableDictionary dictionary];
+        for (NSString *key in self.request.headers) {
+            redactedReqHeaders[key] = [self redactedMetadataValue:self.request.headers[key] forKey:key redactedKeys:redactedKeys];
+        }
+        self.request.headers = redactedReqHeaders;
+
+        NSMutableDictionary *redactedReqParams = [NSMutableDictionary dictionary];
+        for (NSString *key in self.request.params) {
+            redactedReqParams[key] = [self redactedMetadataValue:self.request.params[key] forKey:key redactedKeys:redactedKeys];
+        }
+        self.request.params = redactedReqParams;
+    }
+
+    // Redact http response headers
+    if (self.response != nil) {
+        NSMutableDictionary *redactedResHeaders = [NSMutableDictionary dictionary];
+        for (NSString *key in self.response.headers) {
+            redactedResHeaders[key] = [self redactedMetadataValue:self.response.headers[key] forKey:key redactedKeys:redactedKeys];
+        }
+        self.response.headers = redactedResHeaders;
+    }
+
+    event[BSGHttpRequest] = [self.request toDictionary];
+    event[BSGHttpResponse] = [self.response toDictionary];
 
     return event;
 }
@@ -890,6 +974,35 @@ BSG_OBJC_DIRECT_MEMBERS
     }
     
     return stacktraceTypes.allObjects;
+}
+
+// MARK: - <BugsnagDeliveryStrategy>
+
+@synthesize deliveryStrategy = _deliveryStrategy;
+
+- (BugsnagDeliveryStrategy)deliveryStrategy {
+    if (self.isDeliveryStrategySet == YES) {
+        return _deliveryStrategy;
+    }
+
+    BOOL promiseRejection = self.handledState.severityReasonType == PromiseRejection;
+
+    if (self.handledState.originalUnhandledValue == YES) {
+        if (promiseRejection == YES) {
+            return StoreAndFlush;
+        } else if (self.attemptDeliveryOnCrash == YES) {
+            return StoreAndSend;
+        } else {
+            return StoreOnly;
+        }
+    }
+
+    return SendImmediately;
+}
+
+- (void)setDeliveryStrategy:(BugsnagDeliveryStrategy)newStrategy {
+    self.isDeliveryStrategySet = YES;
+    _deliveryStrategy = newStrategy;
 }
 
 @end

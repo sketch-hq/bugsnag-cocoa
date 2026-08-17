@@ -75,11 +75,12 @@ BUGSNAG_EXTERN BSGBreadcrumbType BSGBreadcrumbTypeFromString(NSString * _Nullabl
 #pragma mark -
 
 typedef NS_ENUM(NSInteger, BSGClientObserverEvent) {
-    BSGClientObserverAddFeatureFlag,    // value: BugsnagFeatureFlag
-    BSGClientObserverClearFeatureFlag,  // value: NSString
-    BSGClientObserverUpdateContext,     // value: NSString
-    BSGClientObserverUpdateMetadata,    // value: BugsnagMetadata
-    BSGClientObserverUpdateUser,        // value: BugsnagUser
+    BSGClientObserverAddFeatureFlag,              // value: BugsnagFeatureFlag
+    BSGClientObserverClearFeatureFlag,            // value: NSString
+    BSGClientObserverUpdateContext,               // value: NSString
+    BSGClientObserverUpdateMetadata,              // value: BugsnagMetadata
+    BSGClientObserverUpdateUser,                  // value: BugsnagUser
+    BSGClientObserverUpdateGroupingDiscriminator, // value: NSString
 };
 
 typedef void (^ BSGClientObserver)(BSGClientObserverEvent event, _Nullable id value);
@@ -164,6 +165,17 @@ typedef void (^ BSGClientObserver)(BSGClientObserverEvent event, _Nullable id va
                     threads:(NSArray<BugsnagThread *> *)threads
                     session:(nullable BugsnagSession *)session;
 
+- (instancetype)initWithApp:(BugsnagAppWithState *)app
+                     device:(BugsnagDeviceWithState *)device
+               handledState:(BugsnagHandledState *)handledState
+                       user:(BugsnagUser *)user
+                   metadata:(BugsnagMetadata *)metadata
+                breadcrumbs:(NSArray<BugsnagBreadcrumb *> *)breadcrumbs
+                     errors:(NSArray<BugsnagError *> *)errors
+                    threads:(NSArray<BugsnagThread *> *)threads
+                    session:(nullable BugsnagSession *)session
+     attemptDeliveryOnCrash:(BOOL) attemptDeliveryOnCrash;
+
 - (instancetype)initWithJson:(NSDictionary *)json;
 
 - (void)attachCustomStacktrace:(NSArray *)frames withType:(NSString *)type;
@@ -240,6 +252,24 @@ typedef void (^ BSGClientObserver)(BSGClientObserverEvent event, _Nullable id va
 - (NSDictionary *)toJson;
 
 - (NSDictionary *)toJsonWithNSNulls;
+
+@end
+
+#pragma mark -
+
+@interface BugsnagHttpRequest ()
+
++ (instancetype)requestFromJson:(NSDictionary *)json;
+
+- (NSDictionary *)toDictionary;
+
+@end
+
+@interface BugsnagHttpResponse ()
+
++ (instancetype)responseFromJson:(NSDictionary *)json;
+
+- (NSDictionary *)toDictionary;
 
 @end
 

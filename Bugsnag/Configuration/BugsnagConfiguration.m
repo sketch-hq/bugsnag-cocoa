@@ -57,12 +57,31 @@ static NSURLSession *getConfigDefaultURLSession(void) {
 // MARK: - BugsnagConfiguration
 // =============================================================================
 
-BSG_OBJC_DIRECT_MEMBERS
+
 @implementation BugsnagConfiguration
 
 + (instancetype _Nonnull)loadConfig {
-    NSDictionary *options = [[NSBundle mainBundle] infoDictionary][@"bugsnag"];
-    return BSGConfigurationWithOptions(options);
+    return [self bsg_loadConfigWithBundle:[NSBundle mainBundle]];
+}
+
++ (instancetype)bsg_loadConfigWithBundle:(NSBundle *)bundle {
+    NSDictionary *info = [bundle infoDictionary];
+
+    // Current behavior: capitalized key.
+    id capitalized = info[@"Bugsnag"];
+    if ([capitalized isKindOfClass:[NSDictionary class]]) {
+        return BSGConfigurationWithOptions((NSDictionary *)capitalized);
+    }
+
+    // Backwards compatibility: older SDK versions used a lowercase key.
+    id lowercase = info[@"bugsnag"];
+    if ([lowercase isKindOfClass:[NSDictionary class]]) {
+        return BSGConfigurationWithOptions((NSDictionary *)lowercase);
+    }
+
+    // If neither key exists (or has the wrong type), behave like an empty config.
+    // Passing nil keeps apiKey unset.
+    return BSGConfigurationWithOptions(nil);
 }
 
 // -----------------------------------------------------------------------------
@@ -172,7 +191,7 @@ BSG_OBJC_DIRECT_MEMBERS
     }
     _featureFlagStore = [[BSGMemoryFeatureFlagStore alloc] init];
     _metadata = [[BugsnagMetadata alloc] init];
-    _endpoints = [BugsnagEndpointConfiguration new];
+    _endpoints = [BugsnagEndpointConfiguration defaultForApiKey:apiKey ?: @""];
     _autoDetectErrors = YES;
 #if BSG_HAVE_APP_HANG_DETECTION
     _appHangThresholdMillis = BugsnagAppHangThresholdFatalOnly;
@@ -357,6 +376,14 @@ BSG_OBJC_DIRECT_MEMBERS
 // =============================================================================
 // MARK: -
 // =============================================================================
+
+- (void)setApiKey:(NSString *)apiKey {
+    _apiKey = [apiKey copy];
+
+    if (!self.endpoints.isCustom) {
+        self.endpoints = [BugsnagEndpointConfiguration defaultForApiKey:apiKey ?: @""];
+    }
+}
 
 - (void)setEndpoints:(BugsnagEndpointConfiguration *)endpoints {
     if ([self isValidURLString:endpoints.notify]) {
