@@ -18,43 +18,44 @@ static const int kNumberOfIterations = 15000;
 static const NSInteger kMaxConcurrentNotifies = 8;
 
 // Note: memory usage increases in line with the number of threads and config.maxPersistedEvents
-static const mach_vm_size_t kMemoryLimit = 45 * 1024 * 1024;
+// Memory limit increased - PLAT-15123
+static const mach_vm_size_t kMemoryLimit = 75 * 1024 * 1024;
 
 int main(int argc, const char * argv[]) {
     if (getenv("QUIET")) {
         freopen("BugsnagStressTest.stdout.log", "w", stdout);
         freopen("BugsnagStressTest.stderr.log", "w", stderr);
     }
-    
+
     CFAbsoluteTime startTime = CFAbsoluteTimeGetCurrent();
-    
+
     NSOperationQueue *notifyQueue = [[NSOperationQueue alloc] init];
     notifyQueue.maxConcurrentOperationCount = kMaxConcurrentNotifies;
-    
+
     BugsnagClient *bugsnagClient = nil;
-    
+
     @autoreleasepool {
         [NSFileManager.defaultManager removeItemAtURL:
          [[NSFileManager.defaultManager
            URLForDirectory:NSApplicationSupportDirectory inDomain:NSUserDomainMask
            appropriateForURL:nil create:NO error:nil]
           URLByAppendingPathComponent:@"com.bugsnag.Bugsnag"] error:nil];
-        
+
         BugsnagConfiguration *config = [BugsnagConfiguration loadConfig];
         config.apiKey = @"0192837465afbecd0192837465afbecd";
         config.autoDetectErrors = NO;
         config.endpoints.notify = kNotifyEndpoint;
         bugsnagClient = [Bugsnag startWithConfiguration:config];
-        
+
         // These threads make a deadlock more likely if any of the notify threads are doing something they shouldn't.
-        
+
         dispatch_async(dispatch_get_global_queue(QOS_CLASS_UTILITY, 0), ^{
             NSThread.currentThread.name = @"com.bugsnag.fixtures.stress-test-malloc";
             while (1) {
                 free(malloc(1024 * 1024));
             }
         });
-        
+
         dispatch_async(dispatch_get_global_queue(QOS_CLASS_UTILITY, 0), ^{
             NSThread.currentThread.name = @"com.bugsnag.fixtures.stress-test-objc";
             while (1) {
@@ -63,7 +64,7 @@ int main(int argc, const char * argv[]) {
                 }
             }
         });
-        
+
         for (int i = 0; i < kNumberOfIterations; i++) {
             [notifyQueue addOperationWithBlock:^{
                 NSError *error = [NSError errorWithDomain:@"BugsnagStressTest" code:random() userInfo:nil];
@@ -73,14 +74,14 @@ int main(int argc, const char * argv[]) {
             }];
         }
     }
-    
+
     NSLog(@"Starting main run loop...");
-    
+
     mach_vm_size_t maxFootprint = 0;
-    
+
     while (notifyQueue.operationCount) {
         [[NSRunLoop mainRunLoop] runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.1]];
-        
+
         // Memory watchdog that terminates the app if Bugsnag is using too much memory.
         // setrlimit() and ulimit are not able to limit memory usage on macOS.
         task_vm_info_data_t task_vm_info = {0};
@@ -92,14 +93,14 @@ int main(int argc, const char * argv[]) {
             abort();
         }
     }
-    
+
     NSLog(@"Ran in %f seconds", CFAbsoluteTimeGetCurrent() - startTime);
     NSLog(@"Maximum memory usage: %.1f MB", maxFootprint / (1024.0 * 1024.0));
-    
+
     NSOperationQueue *uploadQueue = [bugsnagClient valueForKeyPath:@"eventUploader.uploadQueue"];
     NSLog(@"Waiting for all uploads to finish...");
     [uploadQueue waitUntilAllOperationsAreFinished];
     NSLog(@"All uploads have finished.");
-    
+
     return 0;
 }

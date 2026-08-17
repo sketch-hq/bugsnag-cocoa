@@ -13,7 +13,7 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-BSG_OBJC_DIRECT_MEMBERS
+
 @interface BugsnagConfiguration ()
 
 #pragma mark Initializers
@@ -43,6 +43,8 @@ BSG_OBJC_DIRECT_MEMBERS
 #pragma mark Methods
 
 + (BOOL)isValidApiKey:(NSString *)apiKey;
+
++ (instancetype)bsg_loadConfigWithBundle:(NSBundle *)bundle;
 
 - (BOOL)shouldDiscardErrorClass:(NSString *)errorClass;
 

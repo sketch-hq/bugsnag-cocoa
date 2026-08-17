@@ -32,6 +32,7 @@
 #import <Bugsnag/BugsnagFeatureFlagStore.h>
 #import <Bugsnag/BugsnagMetadata.h>
 #import <Bugsnag/BugsnagMetadataStore.h>
+#import <Bugsnag/BugsnagCaptureOptions.h>
 
 @class BugsnagSessionTracker;
 
@@ -52,38 +53,82 @@ BUGSNAG_EXTERN
 // MARK: - Notify
 // =============================================================================
 
-/** Send a custom or caught exception to Bugsnag.
+/**
+ * Send a custom or caught exception to Bugsnag.
  *
  * The exception will be sent to Bugsnag in the background allowing your
  * app to continue running.
  *
- * @param exception  The exception.
+ * @param exception The exception.
  */
 - (void)notify:(NSException *_Nonnull)exception;
 
 /**
+ * Send a custom or caught exception to Bugsnag.
+ *
+ * The exception will be sent to Bugsnag in the background allowing your
+ * app to continue running.
+ *
+ * @param exception The exception.
+ * @param options Defines the set of options to control how the event is generated.
+ */
+- (void)notify:(NSException *_Nonnull)exception
+         options:(BugsnagErrorOptions *_Nullable)options;
+
+/**
  *  Send a custom or caught exception to Bugsnag
  *
- *  @param exception The exception
- *  @param block     A block for optionally configuring the error report
+ *  @param exception The exception.
+ *  @param block A block for optionally configuring the error report.
  */
 - (void)notify:(NSException *_Nonnull)exception
          block:(BugsnagOnErrorBlock _Nullable)block;
 
 /**
+ *  Send a custom or caught exception to Bugsnag
+ *
+ *  @param exception The exception.
+ *  @param options Defines the set of options to control how the event is generated.
+ *  @param block A block for optionally configuring the error report.
+ */
+- (void)notify:(NSException *_Nonnull)exception
+         options:(BugsnagErrorOptions *_Nullable)options
+         block:(BugsnagOnErrorBlock _Nullable)block;
+
+/**
  *  Send an error to Bugsnag
  *
- *  @param error The error
+ *  @param error The error.
  */
 - (void)notifyError:(NSError *_Nonnull)error;
 
 /**
  *  Send an error to Bugsnag
  *
- *  @param error The error
- *  @param block A block for optionally configuring the error report
+ *  @param error The error.
+ *  @param options Defines the set of options to control how the event is generated.
  */
 - (void)notifyError:(NSError *_Nonnull)error
+            options:(BugsnagErrorOptions *_Nullable)options;
+
+/**
+ *  Send an error to Bugsnag
+ *
+ *  @param error The error.
+ *  @param block A block for optionally configuring the error report.
+ */
+- (void)notifyError:(NSError *_Nonnull)error
+              block:(BugsnagOnErrorBlock _Nullable)block;
+
+/**
+ *  Send an error to Bugsnag
+ *
+ *  @param error The error.
+ *  @param options Defines the set of options to control how the event is generated.
+ *  @param block A block for optionally configuring the error report.
+ */
+- (void)notifyError:(NSError *_Nonnull)error
+            options:(BugsnagErrorOptions *_Nullable)options
               block:(BugsnagOnErrorBlock _Nullable)block;
 
 // =============================================================================
@@ -234,6 +279,16 @@ NS_SWIFT_NAME(leaveNetworkRequestBreadcrumb(task:metrics:));
  * Retrieves the context - a general summary of what was happening in the application
  */
  @property (copy, nullable, atomic) NSString *context;
+
+/**
+ * Sets the grouping discriminator
+ */
+- (NSString *_Nullable)setGroupingDiscriminator:(NSString *_Nullable)groupingDiscriminator;
+
+/**
+ * Retrieves the grouping discriminator
+ */
+- (NSString *_Nullable)groupingDiscriminator;
 
 /**
  * @return YES if Bugsnag has been started and the previous launch crashed

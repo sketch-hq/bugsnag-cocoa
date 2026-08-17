@@ -114,12 +114,10 @@ static NSString *getAndCreateSubdir(NSString *rootPath, NSString *relativePath) 
     return subdirPath;
 }
 
-BSG_OBJC_DIRECT_MEMBERS
 @interface BSGFileLocations()
 /// Name of the exclusive subdirectory used. Nil if the shared shared directory is used.
 @property (nonatomic, copy, nullable) NSString *exclusiveSubdirectory;
 @end
-
 @implementation BSGFileLocations
 
 static BSGFileLocations *current = nil;
